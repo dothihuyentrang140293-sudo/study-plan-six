@@ -258,9 +258,10 @@ html,body{
     <div class="field">
       <label>API 提供方</label>
       <select id="cfgProvider" onchange="onProviderChange()">
-        <option value="anthropic">Anthropic Claude（推荐）</option>
+        <option value="cursor">Cursor API（推荐）</option>
+        <option value="anthropic">Anthropic Claude</option>
         <option value="openai">OpenAI</option>
-        <option value="proxy">Cursor 本地代理</option>
+        <option value="proxy">Cursor 本地代理（仅本地）</option>
       </select>
     </div>
     <div class="field" id="fieldApiKey">
@@ -462,7 +463,7 @@ const COURSE_CODES = {DAILY:'daily', TRAVEL:'travel', CAREER:'career'};
 // ╔══════════════════════════════════════════════════════════════════════╗
 // ║  STATE                                                              ║
 // ╚══════════════════════════════════════════════════════════════════════╝
-let CFG = {apiKey:'',provider:'anthropic',model:'claude-3-5-haiku-20241022',mode:'course',course:'DAILY',customCourse:'',lang:'Spanish',customLang:'',rank:'A1',numUnits:5,customNumUnits:0,numLessons:14,customNumLessons:0};
+let CFG = {apiKey:'',provider:'cursor',model:'claude-sonnet-4-5',mode:'course',course:'DAILY',customCourse:'',lang:'Spanish',customLang:'',rank:'A1',numUnits:5,customNumUnits:0,numLessons:14,customNumLessons:0};
 let DATA = {units:[],lessons:[],dialogs:[],diagnoses:[],taskDescs:[],tasks:[],
             expandWordDescs:[],knowledges:[],fl:[],fb:[],choices:[],fillblanks:[],expandWords:[]};
 let STEP_STATUS = {}; // stepId → 'idle'|'running'|'done'|'error'
@@ -517,7 +518,7 @@ function loadConfig() {
     if (s) Object.assign(CFG, JSON.parse(s));
   } catch(e){}
   document.getElementById('cfgApiKey').value         = CFG.apiKey||'';
-  document.getElementById('cfgProvider').value       = CFG.provider||'anthropic';
+  document.getElementById('cfgProvider').value       = CFG.provider||'cursor';
   document.getElementById('cfgCourse').value         = CFG.course||'DAILY';
   document.getElementById('cfgCustomCourse').value   = CFG.customCourse||'';
   document.getElementById('customCourseField').style.display = (CFG.course==='CUSTOM') ? '' : 'none';
@@ -582,6 +583,12 @@ function getSYS() {
 Object.defineProperty(window, 'SYS', { get: getSYS });
 
 const MODELS = {
+  cursor: [
+    {value:'claude-sonnet-4-5',  label:'claude-sonnet-4-5（推荐）'},
+    {value:'claude-sonnet-4-6',  label:'claude-sonnet-4-6（最新）'},
+    {value:'gpt-4o',             label:'gpt-4o'},
+    {value:'gpt-4o-mini',        label:'gpt-4o-mini（快速）'},
+  ],
   anthropic: [
     {value:'claude-3-5-haiku-20241022', label:'claude-3-5-haiku（快速省钱）'},
     {value:'claude-3-5-sonnet-20241022',label:'claude-3-5-sonnet（更高质量）'},
@@ -610,7 +617,11 @@ function onProviderChange(silent) {
   const label = document.getElementById('labelApiKey');
   const input = document.getElementById('cfgApiKey');
   const proxyInfo = document.getElementById('proxyInfo');
-  if (provider === 'anthropic') {
+  if (provider === 'cursor') {
+    label.textContent = 'Cursor API Key';
+    input.placeholder = 'crsr_...';
+    proxyInfo.style.display = 'none';
+  } else if (provider === 'anthropic') {
     label.textContent = 'Anthropic API Key';
     input.placeholder = 'sk-ant-api03-...';
     proxyInfo.style.display = 'none';
@@ -620,7 +631,7 @@ function onProviderChange(silent) {
     proxyInfo.style.display = 'none';
   } else {
     label.textContent = 'Cursor API Key（填入 CURSOR_API_KEY）';
-    input.placeholder = 'cursor_...';
+    input.placeholder = 'crsr_...';
     proxyInfo.style.display = 'block';
   }
   if (!silent) saveConfig();
@@ -631,6 +642,7 @@ async function ai(userPrompt, maxTokens = 2000) {
   if (!CFG.apiKey) throw new Error('请先填写 API Key');
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
+      if (provider === 'cursor')    return await _callCursor(userPrompt, maxTokens);
       if (provider === 'anthropic') return await _callAnthropic(userPrompt, maxTokens);
       if (provider === 'openai')    return await _callOpenAI(userPrompt, maxTokens);
       if (provider === 'proxy')     return await _callProxy(userPrompt);
@@ -640,6 +652,29 @@ async function ai(userPrompt, maxTokens = 2000) {
       await sleep(1200 * (attempt + 1));
     }
   }
+}
+
+async function _callCursor(userPrompt, maxTokens) {
+  const r = await fetch('https://api2.cursor.sh/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${CFG.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: CFG.model || 'claude-sonnet-4-5',
+      response_format: {type: 'json_object'},
+      messages: [{role:'system', content: getSYS()}, {role:'user', content: userPrompt}],
+      temperature: 0.85,
+      max_tokens: maxTokens,
+    }),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(()=>({}));
+    throw new Error(e.error?.message || `Cursor API HTTP ${r.status}`);
+  }
+  const j = await r.json();
+  return JSON.parse(j.choices[0].message.content);
 }
 
 async function _callAnthropic(userPrompt, maxTokens) {
