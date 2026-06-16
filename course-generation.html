@@ -517,6 +517,11 @@ function loadConfig() {
     const s = localStorage.getItem('cg_cfg');
     if (s) Object.assign(CFG, JSON.parse(s));
   } catch(e){}
+  // HTTPS 环境下本地代理无法使用，自动切换到 Cursor API
+  if (CFG.provider === 'proxy' && location.protocol === 'https:') {
+    CFG.provider = 'cursor';
+    CFG.model    = 'claude-sonnet-4-5';
+  }
   document.getElementById('cfgApiKey').value         = CFG.apiKey||'';
   document.getElementById('cfgProvider').value       = CFG.provider||'cursor';
   document.getElementById('cfgCourse').value         = CFG.course||'DAILY';
