@@ -258,8 +258,7 @@ html,body{
     <div class="field">
       <label>API 提供方</label>
       <select id="cfgProvider" onchange="onProviderChange()">
-        <option value="cursor">Cursor API Key（推荐）</option>
-        <option value="anthropic">Anthropic Claude</option>
+        <option value="anthropic">Anthropic Claude（推荐）</option>
         <option value="openai">OpenAI</option>
         <option value="proxy">Cursor 本地代理（仅本地）</option>
       </select>
@@ -463,7 +462,7 @@ const COURSE_CODES = {DAILY:'daily', TRAVEL:'travel', CAREER:'career'};
 // ╔══════════════════════════════════════════════════════════════════════╗
 // ║  STATE                                                              ║
 // ╚══════════════════════════════════════════════════════════════════════╝
-let CFG = {apiKey:'',provider:'cursor',model:'claude-3-5-sonnet-20241022',mode:'course',course:'DAILY',customCourse:'',lang:'Spanish',customLang:'',rank:'A1',numUnits:5,customNumUnits:0,numLessons:14,customNumLessons:0};
+let CFG = {apiKey:'',provider:'anthropic',model:'claude-3-5-haiku-20241022',mode:'course',course:'DAILY',customCourse:'',lang:'Spanish',customLang:'',rank:'A1',numUnits:5,customNumUnits:0,numLessons:14,customNumLessons:0};
 let DATA = {units:[],lessons:[],dialogs:[],diagnoses:[],taskDescs:[],tasks:[],
             expandWordDescs:[],knowledges:[],fl:[],fb:[],choices:[],fillblanks:[],expandWords:[]};
 let STEP_STATUS = {}; // stepId → 'idle'|'running'|'done'|'error'
@@ -519,11 +518,15 @@ function loadConfig() {
   } catch(e){}
   // HTTPS 环境下本地代理无法使用，自动切换到 Cursor API
   if (CFG.provider === 'proxy' && location.protocol === 'https:') {
-    CFG.provider = 'cursor';
-    CFG.model    = 'claude-sonnet-4-5';
+    CFG.provider = 'anthropic';
+    CFG.model    = 'claude-3-5-haiku-20241022';
+  }
+  if (CFG.provider === 'cursor') {
+    CFG.provider = 'anthropic';
+    CFG.model    = 'claude-3-5-haiku-20241022';
   }
   document.getElementById('cfgApiKey').value         = CFG.apiKey||'';
-  document.getElementById('cfgProvider').value       = CFG.provider||'cursor';
+  document.getElementById('cfgProvider').value       = CFG.provider||'anthropic';
   document.getElementById('cfgCourse').value         = CFG.course||'DAILY';
   document.getElementById('cfgCustomCourse').value   = CFG.customCourse||'';
   document.getElementById('customCourseField').style.display = (CFG.course==='CUSTOM') ? '' : 'none';
