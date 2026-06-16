@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Google 财务收入报告 · 2026年5月</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1320; --panel:#171c2e; --panel2:#1e2540; --line:#2a3150;
+    --text:#e7ebf5; --muted:#8b93ad; --accent:#5b8cff; --accent2:#36d399;
+    --warn:#f59e0b; --danger:#f25f5c; --up:#36d399; --down:#f25f5c;
+    --veetalk:#5b8cff; --dino:#f59e0b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--text);line-height:1.5;padding-bottom:60px}
+  header{position:sticky;top:0;z-index:50;background:rgba(15,19,32,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:14px 24px}
+  .header-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700}
+  .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent2);box-shadow:0 0 10px var(--accent2)}
+  .tag{font-size:10px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);
+    padding:2px 8px;border-radius:20px}
+  main{max-width:1280px;margin:0 auto;padding:20px 24px}
+  .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .kpi .k{font-size:12px;color:var(--muted)}
+  .kpi .v{font-size:26px;font-weight:800;margin-top:4px;letter-spacing:-.5px}
+  .kpi .v small{font-size:13px;color:var(--muted);font-weight:500}
+  .kpi .cmp{font-size:11.5px;color:var(--muted);margin-top:4px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .card.full{grid-column:1 / -1}
+  .card h2{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .card .src{font-size:11px;color:var(--muted);margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:12px;position:sticky;top:0;background:var(--panel)}
+  tbody tr:hover{background:var(--panel2)}
+  .chart-wrap{position:relative;height:260px}
+  .chart-wrap.tall{height:320px}
+  .pos{color:var(--up)} .neg{color:var(--down)}
+  .pill{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600}
+  .pill.vt{background:rgba(91,140,255,.15);color:#9ab6ff}
+  .pill.dn{background:rgba(245,158,11,.15);color:#ffcb73}
+  .bad{color:var(--danger);font-weight:700}
+  .warnv{color:var(--warn);font-weight:700}
+  .finding{border-radius:10px;padding:12px 14px;margin-top:12px;background:var(--panel2);border-left:4px solid var(--line)}
+  .finding.danger{border-left-color:var(--danger);background:rgba(242,95,92,.07)}
+  .finding.warn{border-left-color:var(--warn);background:rgba(245,158,11,.07)}
+  .finding.info{border-left-color:var(--accent);background:rgba(91,140,255,.06)}
+  .finding.ok{border-left-color:var(--accent2);background:rgba(54,211,153,.07)}
+  .finding-title{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .finding-body{margin-top:6px;font-size:13px;color:var(--text)}
+  .finding-body b{color:#fff}
+  .scroll{max-height:360px;overflow-y:auto}
+  .foot{color:var(--muted);font-size:12px;text-align:center;margin-top:24px}
+  @media(max-width:980px){.kpi-row{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-row">
+    <div class="brand"><span class="dot"></span> Google 财务收入报告
+      <span class="tag">2026 年 5 月</span><span class="tag">VeeTalk + Dino AI</span></div>
+    <div style="margin-left:auto;color:var(--muted);font-size:12px">数据源：Google Play Console 财务交易明细 (PlayApps_202605.csv) · 币种 SGD</div>
+  </div>
+</header>
+
+<main>
+  <div class="kpi-row" id="kpis"></div>
+
+  <div class="grid">
+    <div class="card" id="card-breakdown">
+      <h2>① 财务口径瀑布</h2>
+      <div class="src">从用户付款到开发者实收的逐项扣减 · 金额 SGD</div>
+      <div class="chart-wrap"><canvas id="chBreak"></canvas></div>
+    </div>
+
+    <div class="card" id="card-app">
+      <h2>② 按 App 收入结构</h2>
+      <div class="src">净实收占比 · VeeTalk vs Dino AI</div>
+      <div class="chart-wrap"><canvas id="chApp"></canvas></div>
+      <table id="tblApp"></table>
+    </div>
+
+    <div class="card full" id="card-country">
+      <h2>③ 分国家收入（净实收 Top）</h2>
+      <div class="src">毛收入 vs 退款 vs 净实收 · 按净实收排序</div>
+      <div class="chart-wrap tall"><canvas id="chCountry"></canvas></div>
+      <div class="scroll"><table id="tblCountry"></table></div>
+    </div>
+
+    <div class="card" id="card-td-global">
+      <h2>④ 试用转化 vs 直接购买</h2>
+      <div class="src">仅 Charge 扣款 · Offer 含 trial=试用转正，无=直购</div>
+      <div class="chart-wrap"><canvas id="chTD"></canvas></div>
+      <table id="tblOffer"></table>
+    </div>
+
+    <div class="card" id="card-td-country">
+      <h2>⑤ 分国家：试用 vs 直购</h2>
+      <div class="src">堆叠毛收入（SGD）· 取毛收入 Top 国家</div>
+      <div class="chart-wrap tall"><canvas id="chTDC"></canvas></div>
+    </div>
+
+    <div class="card full" id="card-day">
+      <h2>⑥ 按日趋势</h2>
+      <div class="src">每日净实收 / 毛收入 / 退款（SGD）· 按交易日期</div>
+      <div class="chart-wrap tall"><canvas id="chDay"></canvas></div>
+    </div>
+
+    <div class="card full" id="card-prod">
+      <h2>⑦ 产品 / SKU 明细（Charge 毛收入）</h2>
+      <div class="src">按毛收入排序</div>
+      <table id="tblProd"></table>
+    </div>
+
+    <div class="card full" id="card-find">
+      <h2>⑧ 关键结论</h2>
+      <div class="src">自动归纳 · 风险与机会</div>
+      <div id="findings"></div>
+    </div>
+  </div>
+
+  <div class="foot" id="foot"></div>
+</main>
+
+<script>
+const DATA = {"month": "2026-05", "currency": "SGD", "totals": {"charge": 5897.64, "fee": -884.7, "tax": -71.3, "charge_rf": -1415.55, "fee_rf": 212.34, "tax_rf": 17.89, "net": 3756.32, "n_charge": 296, "n_refund": 33, "gross_after_refund": 4482.09, "refund_rate": 24.0, "trial_amt": 5131.9, "direct_amt": 765.74, "trial_share": 87.02, "n_country": 22, "n_orders": 302}, "by_app": [{"app": "VeeTalk", "charge": 3649.61, "refund": -525.76, "net": 2625.56, "n_charge": 219, "refund_rate": 14.41, "trial": 3551.69, "direct": 97.92}, {"app": "Dino AI", "charge": 2248.03, "refund": -889.79, "net": 1140.24, "n_charge": 77, "refund_rate": 39.58, "trial": 1580.21, "direct": 667.82}], "by_country": [{"cc": "ID", "name": "印尼", "charge": 2421.96, "n_charge": 129, "arppu": 18.77, "refund": -574.5, "n_refund": 22, "refund_rate": 23.72, "net": 1545.37, "trial": 2409.17, "trial_n": 128, "direct": 12.79, "direct_n": 1, "veetalk": 1734.37, "dino": 687.59, "net_share": 41.14}, {"cc": "SA", "name": "沙特", "charge": 867.71, "n_charge": 37, "arppu": 23.45, "refund": -68.03, "n_refund": 1, "refund_rate": 7.84, "net": 679.69, "trial": 823.2, "trial_n": 36, "direct": 44.51, "direct_n": 1, "veetalk": 661.36, "dino": 206.35, "net_share": 18.09}, {"cc": "TH", "name": "泰国", "charge": 839.36, "n_charge": 51, "arppu": 16.46, "refund": -187.24, "n_refund": 7, "refund_rate": 22.31, "net": 545.54, "trial": 839.36, "trial_n": 51, "direct": 0.0, "direct_n": 0, "veetalk": 559.6, "dino": 279.76, "net_share": 14.52}, {"cc": "VN", "name": "越南", "charge": 299.47, "n_charge": 22, "arppu": 13.61, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 250.49, "trial": 286.48, "trial_n": 21, "direct": 12.99, "direct_n": 1, "veetalk": 104.15, "dino": 195.32, "net_share": 6.67}, {"cc": "KR", "name": "韩国", "charge": 775.09, "n_charge": 12, "arppu": 64.59, "refund": -565.21, "n_refund": 2, "refund_rate": 72.92, "net": 175.57, "trial": 210.27, "trial_n": 10, "direct": 564.82, "direct_n": 2, "veetalk": 73.8, "dino": 701.29, "net_share": 4.67}, {"cc": "US", "name": "美国", "charge": 92.11, "n_charge": 6, "arppu": 15.35, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 78.28, "trial": 92.11, "trial_n": 6, "direct": 0.0, "direct_n": 0, "veetalk": 92.11, "dino": 0.0, "net_share": 2.08}, {"cc": "AE", "name": "阿联酋", "charge": 79.36, "n_charge": 5, "arppu": 15.87, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 67.46, "trial": 79.36, "trial_n": 5, "direct": 0.0, "direct_n": 0, "veetalk": 79.36, "dino": 0.0, "net_share": 1.8}, {"cc": "TR", "name": "土耳其", "charge": 91.25, "n_charge": 8, "arppu": 11.41, "refund": -20.57, "n_refund": 1, "refund_rate": 22.54, "net": 60.06, "trial": 91.25, "trial_n": 8, "direct": 0.0, "direct_n": 0, "veetalk": 0.0, "dino": 91.25, "net_share": 1.6}, {"cc": "MX", "name": "墨西哥", "charge": 69.72, "n_charge": 2, "arppu": 34.86, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 59.26, "trial": 11.39, "trial_n": 1, "direct": 58.33, "direct_n": 1, "veetalk": 58.33, "dino": 11.39, "net_share": 1.58}, {"cc": "MY", "name": "马来", "charge": 55.4, "n_charge": 2, "arppu": 27.7, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 46.35, "trial": 12.89, "trial_n": 1, "direct": 42.51, "direct_n": 1, "veetalk": 12.89, "dino": 42.51, "net_share": 1.23}, {"cc": "HK", "name": "香港", "charge": 55.32, "n_charge": 4, "arppu": 13.83, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 46.28, "trial": 41.51, "trial_n": 3, "direct": 13.81, "direct_n": 1, "veetalk": 55.32, "dino": 0.0, "net_share": 1.23}, {"cc": "JP", "name": "日本", "charge": 44.07, "n_charge": 3, "arppu": 14.69, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 36.86, "trial": 44.07, "trial_n": 3, "direct": 0.0, "direct_n": 0, "veetalk": 44.07, "dino": 0.0, "net_share": 0.98}, {"cc": "TW", "name": "台湾", "charge": 43.99, "n_charge": 3, "arppu": 14.66, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 34.24, "trial": 43.99, "trial_n": 3, "direct": 0.0, "direct_n": 0, "veetalk": 43.99, "dino": 0.0, "net_share": 0.91}, {"cc": "KW", "name": "科威特", "charge": 33.21, "n_charge": 2, "arppu": 16.61, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 28.22, "trial": 33.21, "trial_n": 2, "direct": 0.0, "direct_n": 0, "veetalk": 16.62, "dino": 16.59, "net_share": 0.75}, {"cc": "PK", "name": "巴基斯坦", "charge": 20.5, "n_charge": 2, "arppu": 10.25, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 17.15, "trial": 20.5, "trial_n": 2, "direct": 0.0, "direct_n": 0, "veetalk": 20.5, "dino": 0.0, "net_share": 0.46}, {"cc": "BR", "name": "巴西", "charge": 27.54, "n_charge": 2, "arppu": 13.77, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 16.53, "trial": 27.54, "trial_n": 2, "direct": 0.0, "direct_n": 0, "veetalk": 27.54, "dino": 0.0, "net_share": 0.44}, {"cc": "QA", "name": "卡塔尔", "charge": 16.48, "n_charge": 1, "arppu": 16.48, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 14.01, "trial": 16.48, "trial_n": 1, "direct": 0.0, "direct_n": 0, "veetalk": 16.48, "dino": 0.0, "net_share": 0.37}, {"cc": "SG", "name": "新加坡", "charge": 15.98, "n_charge": 1, "arppu": 15.98, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 13.36, "trial": 0.0, "trial_n": 0, "direct": 15.98, "direct_n": 1, "veetalk": 0.0, "dino": 15.98, "net_share": 0.36}, {"cc": "DE", "name": "德国", "charge": 13.72, "n_charge": 1, "arppu": 13.72, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 11.66, "trial": 13.72, "trial_n": 1, "direct": 0.0, "direct_n": 0, "veetalk": 13.72, "dino": 0.0, "net_share": 0.31}, {"cc": "NI", "name": "尼加拉瓜", "charge": 12.79, "n_charge": 1, "arppu": 12.79, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 10.87, "trial": 12.79, "trial_n": 1, "direct": 0.0, "direct_n": 0, "veetalk": 12.79, "dino": 0.0, "net_share": 0.29}, {"cc": "ZA", "name": "南非", "charge": 12.17, "n_charge": 1, "arppu": 12.17, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 10.34, "trial": 12.17, "trial_n": 1, "direct": 0.0, "direct_n": 0, "veetalk": 12.17, "dino": 0.0, "net_share": 0.28}, {"cc": "IN", "name": "印度", "charge": 10.44, "n_charge": 1, "arppu": 10.44, "refund": 0.0, "n_refund": 0, "refund_rate": -0.0, "net": 8.73, "trial": 10.44, "trial_n": 1, "direct": 0.0, "direct_n": 0, "veetalk": 10.44, "dino": 0.0, "net_share": 0.23}], "by_day": [{"date": "2026-05-01", "net": 247.86, "charge": 317.28, "refund": -21.39}, {"date": "2026-05-02", "net": 282.78, "charge": 358.5, "refund": -20.57}, {"date": "2026-05-03", "net": 94.67, "charge": 216.78, "refund": -104.64}, {"date": "2026-05-04", "net": 170.43, "charge": 289.92, "refund": -87.6}, {"date": "2026-05-05", "net": 129.2, "charge": 257.28, "refund": -103.1}, {"date": "2026-05-06", "net": -145.41, "charge": 172.5, "refund": -346.57}, {"date": "2026-05-07", "net": 175.74, "charge": 280.8, "refund": -72.51}, {"date": "2026-05-08", "net": 345.44, "charge": 483.99, "refund": -71.58}, {"date": "2026-05-09", "net": 352.22, "charge": 432.36, "refund": -11.52}, {"date": "2026-05-10", "net": 129.02, "charge": 153.33, "refund": 0.0}, {"date": "2026-05-11", "net": 78.62, "charge": 118.93, "refund": -25.84}, {"date": "2026-05-12", "net": 177.75, "charge": 212.28, "refund": 0.0}, {"date": "2026-05-13", "net": -96.21, "charge": 249.48, "refund": -365.19}, {"date": "2026-05-14", "net": 103.08, "charge": 149.03, "refund": -25.81}, {"date": "2026-05-15", "net": 226.68, "charge": 272.08, "refund": 0.0}, {"date": "2026-05-16", "net": 108.62, "charge": 142.12, "refund": -13.02}, {"date": "2026-05-17", "net": 129.44, "charge": 165.9, "refund": -11.4}, {"date": "2026-05-18", "net": 48.98, "charge": 79.11, "refund": -21.03}, {"date": "2026-05-19", "net": 204.13, "charge": 242.43, "refund": 0.0}, {"date": "2026-05-20", "net": -3.15, "charge": 78.41, "refund": -81.56}, {"date": "2026-05-21", "net": 71.63, "charge": 85.64, "refund": 0.0}, {"date": "2026-05-22", "net": 94.99, "charge": 124.46, "refund": -11.34}, {"date": "2026-05-23", "net": 138.14, "charge": 185.32, "refund": -20.88}, {"date": "2026-05-24", "net": 100.89, "charge": 119.75, "refund": 0.0}, {"date": "2026-05-25", "net": 204.84, "charge": 243.21, "refund": 0.0}, {"date": "2026-05-26", "net": 106.42, "charge": 125.8, "refund": 0.0}, {"date": "2026-05-27", "net": 66.21, "charge": 78.93, "refund": 0.0}, {"date": "2026-05-28", "net": 68.31, "charge": 81.41, "refund": 0.0}, {"date": "2026-05-29", "net": 100.86, "charge": 119.87, "refund": 0.0}, {"date": "2026-05-30", "net": 20.2, "charge": 24.16, "refund": 0.0}, {"date": "2026-05-31", "net": 23.94, "charge": 36.58, "refund": 0.0}], "products": [{"app": "Dino AI", "title": "VIP Package (Dino AI: English for Kids)", "sku": "upgrade_vip", "count": 77, "sum": 2248.03}, {"app": "VeeTalk", "title": "Monthly - Free Trial (VeeTalk - English Learning AI)", "sku": "gp.monthly.trial", "count": 149, "sum": 2177.53}, {"app": "VeeTalk", "title": "Yearly - Free Trial (VeeTalk - English Learning AI)", "sku": "gp.yearly.trial", "count": 13, "sum": 640.5}, {"app": "VeeTalk", "title": "Monthly - Free Trial (VeeTalk AI Language Tutor)", "sku": "gp.monthly.trial", "count": 37, "sum": 510.53}, {"app": "VeeTalk", "title": "Monthly - Free Trial (VeeTalk - Language Learning AI)", "sku": "gp.monthly.trial", "count": 12, "sum": 173.27}, {"app": "VeeTalk", "title": "Monthly (VeeTalk - English Learning AI)", "sku": "gp.monthly", "count": 6, "sum": 76.62}, {"app": "VeeTalk", "title": "Yearly (VeeTalk - English Learning AI)", "sku": "gp.yearly", "count": 1, "sum": 58.33}, {"app": "VeeTalk", "title": "Monthly (VeeTalk AI Language Tutor)", "sku": "gp.monthly", "count": 1, "sum": 12.83}], "offers": [{"offer": "7-day-monthly-trial", "count": 196, "sum": 2834.53}, {"offer": "7-day-free-trial", "count": 34, "sum": 1101.08}, {"offer": "(无/直购)", "count": 9, "sum": 765.74}, {"offer": "3-day-free-trial", "count": 21, "sum": 741.47}, {"offer": "7-day-fre-trial", "count": 36, "sum": 454.82}]};
+const C = {bg:'#0f1320',panel:'#171c2e',panel2:'#1e2540',line:'#2a3150',text:'#e7ebf5',
+  muted:'#8b93ad',accent:'#5b8cff',accent2:'#36d399',warn:'#f59e0b',danger:'#f25f5c',
+  veetalk:'#5b8cff',dino:'#f59e0b'};
+const fmt = n => (n==null?'—':Number(n).toLocaleString(undefined,{maximumFractionDigits:0}));
+const fmt2 = n => (n==null?'—':Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
+Chart.defaults.color = C.muted;
+Chart.defaults.borderColor = C.line;
+Chart.defaults.font.family = '-apple-system,"PingFang SC",sans-serif';
+
+const T = DATA.totals;
+// KPI
+const kpis = [
+  {k:'用户付款毛收入', v:fmt(T.charge), s:T.currency, c:`${T.n_charge} 笔扣款`},
+  {k:'开发者净实收', v:fmt(T.net), s:T.currency, c:`扣除抽成/税/退款后`},
+  {k:'退款金额', v:fmt(Math.abs(T.charge_rf)), s:T.currency, c:`${T.n_refund} 笔`},
+  {k:'退款率(金额)', v:T.refund_rate, s:'%', c:`占毛收入`, danger:T.refund_rate>20},
+  {k:'试用转化占比', v:T.trial_share, s:'%', c:`直购仅 ${(100-T.trial_share).toFixed(1)}%`},
+];
+document.getElementById('kpis').innerHTML = kpis.map(x=>`
+  <div class="kpi"><div class="k">${x.k}</div>
+  <div class="v" style="${x.danger?'color:var(--danger)':''}">${x.v} <small>${x.s||''}</small></div>
+  <div class="cmp">${x.c||''}</div></div>`).join('');
+
+// ① 瀑布
+const wf = [
+  {label:'用户付款',val:T.charge,col:C.accent},
+  {label:'退款',val:T.charge_rf,col:C.danger},
+  {label:'Google抽成',val:T.fee+T.fee_rf,col:C.warn},
+  {label:'税费',val:T.tax+T.tax_rf,col:C.warn},
+  {label:'净实收',val:T.net,col:C.accent2},
+];
+let run=0; const bars=wf.map((x,i)=>{
+  if(i===wf.length-1) return {base:0,len:x.val};
+  const base = x.val>=0?run:run+x.val; const len=Math.abs(x.val); run+= x.val; return {base,len};
+});
+new Chart(document.getElementById('chBreak'),{type:'bar',
+  data:{labels:wf.map(x=>x.label),datasets:[
+    {label:'_base',data:bars.map(b=>b.base),backgroundColor:'transparent',stack:'s'},
+    {label:'金额',data:bars.map(b=>b.len),backgroundColor:wf.map(x=>x.col),stack:'s',borderRadius:4},
+  ]},
+  options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:(c)=>c.datasetIndex===1?fmt2(wf[c.dataIndex].val)+' '+T.currency:''}}},
+    scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmt(v)}}}}});
+
+// ② App doughnut + table
+new Chart(document.getElementById('chApp'),{type:'doughnut',
+  data:{labels:DATA.by_app.map(a=>a.app),datasets:[{data:DATA.by_app.map(a=>a.net),
+    backgroundColor:DATA.by_app.map(a=>a.app==='VeeTalk'?C.veetalk:C.dino),borderColor:C.panel,borderWidth:2}]},
+  options:{cutout:'62%',plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt2(c.raw)} ${T.currency}`}}}}});
+document.getElementById('tblApp').innerHTML =
+  '<thead><tr><th>App</th><th>毛收入</th><th>退款</th><th>退款率</th><th>净实收</th></tr></thead><tbody>'+
+  DATA.by_app.map(a=>`<tr><td><span class="pill ${a.app==='VeeTalk'?'vt':'dn'}">${a.app}</span></td>
+    <td>${fmt2(a.charge)}</td><td class="neg">${fmt2(a.refund)}</td>
+    <td class="${a.refund_rate>20?'bad':''}">${a.refund_rate}%</td><td>${fmt2(a.net)}</td></tr>`).join('')+'</tbody>';
+
+// ③ 国家 bar (top 12 by net)
+const ctop = DATA.by_country.slice(0,12);
+new Chart(document.getElementById('chCountry'),{type:'bar',
+  data:{labels:ctop.map(c=>c.name),datasets:[
+    {label:'净实收',data:ctop.map(c=>c.net),backgroundColor:C.accent2,borderRadius:4},
+    {label:'退款',data:ctop.map(c=>Math.abs(c.refund)),backgroundColor:C.danger,borderRadius:4},
+  ]},
+  options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmt2(c.raw)} ${T.currency}`}}},
+    scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmt(v)}}}}});
+document.getElementById('tblCountry').innerHTML =
+  '<thead><tr><th>国家</th><th>毛收入</th><th>笔数</th><th>客单价</th><th>退款</th><th>退款率</th><th>净实收</th><th>净占比</th><th>试用占比</th></tr></thead><tbody>'+
+  DATA.by_country.map(c=>{const ts=c.charge?(c.trial/c.charge*100):0;return `<tr><td>${c.name} <span style="color:var(--muted)">${c.cc}</span></td>
+    <td>${fmt2(c.charge)}</td><td>${c.n_charge}</td><td>${fmt2(c.arppu)}</td>
+    <td class="neg">${c.refund?fmt2(c.refund):'—'}</td>
+    <td class="${c.refund_rate>30?'bad':(c.refund_rate>15?'warnv':'')}">${c.refund_rate?c.refund_rate+'%':'—'}</td>
+    <td>${fmt2(c.net)}</td><td>${c.net_share}%</td><td>${ts.toFixed(0)}%</td></tr>`}).join('')+'</tbody>';
+
+// ④ 试用 vs 直购 doughnut + offer table
+new Chart(document.getElementById('chTD'),{type:'doughnut',
+  data:{labels:['试用转正','直接购买'],datasets:[{data:[T.trial_amt,T.direct_amt],
+    backgroundColor:[C.accent2,C.warn],borderColor:C.panel,borderWidth:2}]},
+  options:{cutout:'62%',plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt2(c.raw)} ${T.currency}`}}}}});
+document.getElementById('tblOffer').innerHTML =
+  '<thead><tr><th>Offer</th><th>笔数</th><th>毛收入</th></tr></thead><tbody>'+
+  DATA.offers.map(o=>`<tr><td>${o.offer}</td><td>${o.count}</td><td>${fmt2(o.sum)}</td></tr>`).join('')+'</tbody>';
+
+// ⑤ 分国家 试用vs直购 stacked (top by charge)
+const cc2 = [...DATA.by_country].sort((a,b)=>b.charge-a.charge).slice(0,12);
+new Chart(document.getElementById('chTDC'),{type:'bar',
+  data:{labels:cc2.map(c=>c.name),datasets:[
+    {label:'试用转正',data:cc2.map(c=>c.trial),backgroundColor:C.accent2,stack:'s',borderRadius:3},
+    {label:'直接购买',data:cc2.map(c=>c.direct),backgroundColor:C.warn,stack:'s',borderRadius:3},
+  ]},
+  options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmt2(c.raw)} ${T.currency}`}}},
+    scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:v=>fmt(v)}}}}});
+
+// ⑥ 按日趋势
+new Chart(document.getElementById('chDay'),{type:'line',
+  data:{labels:DATA.by_day.map(d=>d.date.slice(5)),datasets:[
+    {label:'净实收',data:DATA.by_day.map(d=>d.net),borderColor:C.accent2,backgroundColor:'rgba(54,211,153,.12)',fill:true,tension:.3,pointRadius:2},
+    {label:'毛收入',data:DATA.by_day.map(d=>d.charge),borderColor:C.accent,tension:.3,pointRadius:0},
+    {label:'退款',data:DATA.by_day.map(d=>d.refund),borderColor:C.danger,tension:.3,pointRadius:0},
+  ]},
+  options:{interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom'},
+    tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmt2(c.raw)} ${T.currency}`}}},
+    scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmt(v)}}}}});
+
+// ⑦ 产品明细
+document.getElementById('tblProd').innerHTML =
+  '<thead><tr><th>App</th><th>产品</th><th>SKU</th><th>笔数</th><th>毛收入</th></tr></thead><tbody>'+
+  DATA.products.map(p=>`<tr><td><span class="pill ${p.app==='VeeTalk'?'vt':'dn'}">${p.app}</span></td>
+    <td style="text-align:left">${p.title}</td><td style="text-align:left;color:var(--muted)">${p.sku}</td>
+    <td>${p.count}</td><td>${fmt2(p.sum)}</td></tr>`).join('')+'</tbody>';
+
+// ⑧ findings
+const kr = DATA.by_country.find(c=>c.cc==='KR')||{};
+const id = DATA.by_country.find(c=>c.cc==='ID')||{};
+const sa = DATA.by_country.find(c=>c.cc==='SA')||{};
+const dino = DATA.by_app.find(a=>a.app==='Dino AI')||{};
+const vt = DATA.by_app.find(a=>a.app==='VeeTalk')||{};
+const findings = [
+  {t:'danger',h:'⚠️ 整体退款率偏高 '+T.refund_rate+'%',
+   b:`本月退款 <b>${fmt2(Math.abs(T.charge_rf))} ${T.currency}</b>（${T.n_refund} 笔），吞掉毛收入的 ${T.refund_rate}%。毛收入 ${fmt(T.charge)} 最终净实收仅 <b>${fmt(T.net)}</b>。`},
+  {t:'danger',h:'⚠️ 韩国 Dino AI 年包高额退款',
+   b:`韩国毛收入 <b>${fmt2(kr.charge)}</b>、客单价 ${fmt2(kr.arppu)}（全场最高），但退款率 <b>${kr.refund_rate}%</b>，净实收仅 ${fmt2(kr.net)}。其中 2 笔 <b>Dino AI 年包直购</b>（gp-dino-yearly，约 565 SGD）几乎全额退款，是本月最大异常，建议核查误购/家长争议/扣费体验。`},
+  {t:'warn',h:'⚠️ Dino AI 退款率 '+dino.refund_rate+'% 远高于 VeeTalk',
+   b:`Dino AI 毛收入 ${fmt2(dino.charge)}、退款率 <b>${dino.refund_rate}%</b>，净实收 ${fmt2(dino.net)}；VeeTalk 退款率仅 ${vt.refund_rate}%。Dino AI 的"直购"占比也明显更高（${(dino.direct/dino.charge*100).toFixed(0)}% vs VeeTalk ${(vt.direct/vt.charge*100).toFixed(0)}%），高客单直购路径风险大。`},
+  {t:'info',h:'📊 收入 '+T.trial_share+'% 来自试用转正，本质是试用驱动变现',
+   b:`试用转正 <b>${fmt(T.trial_amt)}</b>（${T.trial_share}%）vs 直购 ${fmt(T.direct_amt)}（${(100-T.trial_share).toFixed(1)}%）。绝大多数国家几乎 100% 收入来自试用转正，投放/产品应聚焦"试用→转正"漏斗。`},
+  {t:'info',h:'🌏 东南亚为基本盘，印尼一国独大',
+   b:`印尼净实收 <b>${fmt2(id.net)}</b>（占 ${id.net_share}%），但客单价仅 ${fmt2(id.arppu)}、退款率 ${id.refund_rate}%，属"走量低价"市场。`},
+  {t:'ok',h:'✅ 沙特是质量最佳市场',
+   b:`沙特客单价 ${fmt2(sa.arppu)}、退款率仅 <b>${sa.refund_rate}%</b>，净实收 ${fmt2(sa.net)}（占 ${sa.net_share}%，第二），值得加大投放。`},
+];
+document.getElementById('findings').innerHTML = findings.map(f=>`
+  <div class="finding ${f.t}"><div class="finding-title">${f.h}</div>
+  <div class="finding-body">${f.b}</div></div>`).join('');
+
+document.getElementById('foot').textContent =
+  `共 ${T.n_orders} 个订单 · ${T.n_country} 个国家 · 数据口径：Amount(Merchant Currency) SGD · 报告生成于本地脚本`;
+</script>
+</body>
+</html>
