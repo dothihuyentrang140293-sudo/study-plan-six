@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 课程内容生成器 · VeeTalk</title>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #f4f5f9;
+  --panel: #ffffff;
+  --text: #1f2937;
+  --text-soft: #475569;
+  --muted: #6b7280;
+  --border: #e6e8ed;
+  --primary: #6E5DCB;
+  --primary-soft: #ECE9FB;
+  --primary-deep: #4A3FB8;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning: #D97706;
+  --warning-soft: #fef3c7;
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
+  --shadow: 0 1px 3px rgba(15,23,42,.05), 0 4px 12px rgba(15,23,42,.05);
+  --radius: 8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;height:100%;
+}
+.app{display:flex;min-height:100vh}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:270px;min-width:270px;background:var(--panel);
+  border-right:1px solid var(--border);padding:18px 14px;
+  overflow-y:auto;position:sticky;top:0;height:100vh;
+  display:flex;flex-direction:column;gap:14px;
+}
+.logo{font-size:16px;font-weight:800;color:var(--primary)}
+.logo-sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+.config-card{background:var(--primary-soft);border-radius:var(--radius);padding:13px}
+.config-card h3{font-size:11px;font-weight:700;color:var(--primary);margin-bottom:10px;text-transform:uppercase;letter-spacing:.6px}
+
+/* 系统课分组标签 */
+.subcfg-label{
+  font-size:11px;font-weight:700;color:var(--primary);
+  background:rgba(110,93,203,.12);border-radius:5px;
+  padding:4px 8px;margin:8px 0 6px;border-left:3px solid var(--primary);
+}
+
+/* ── 模式切换 ── */
+.mode-tabs{display:flex;gap:6px;margin-top:4px}
+.mode-tab{
+  flex:1;padding:8px 4px;border-radius:7px;border:1.5px solid var(--border);
+  background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);
+  text-align:center;transition:all .18s;
+}
+.mode-tab:hover{border-color:var(--primary);color:var(--primary)}
+.mode-tab.active{
+  background:var(--primary);color:#fff;border-color:var(--primary);
+  box-shadow:0 2px 8px rgba(110,93,203,.3);
+}
+.mode-panel{display:none;flex-direction:column;gap:14px}
+.mode-panel.active{display:flex}
+.field{margin-bottom:9px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;font-weight:500}
+.field input,.field select{
+  width:100%;padding:6px 8px;border:1px solid var(--border);
+  border-radius:5px;font-size:12px;background:#fff;outline:none;
+  transition:border-color .15s;
+}
+.field input:focus,.field select:focus{border-color:var(--primary)}
+.field input[type=password]{letter-spacing:.12em}
+.key-wrap{position:relative;display:flex;gap:6px;align-items:center}
+.key-wrap input{flex:1;min-width:0}
+.key-toggle{
+  flex-shrink:0;padding:5px 8px;border:1px solid var(--border);
+  border-radius:5px;background:#fff;cursor:pointer;font-size:11px;
+  color:var(--muted);white-space:nowrap;line-height:1;
+}
+.key-toggle:hover{color:var(--primary);border-color:var(--primary)}
+
+/* ── BUTTONS ── */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  padding:7px 13px;border-radius:6px;font-size:12px;font-weight:500;
+  border:none;cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-deep)}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed}
+.btn-outline{background:#fff;color:var(--primary);border:1px solid var(--primary)}
+.btn-outline:hover{background:var(--primary-soft)}
+.btn-danger{background:var(--danger-soft);color:var(--danger);border:1px solid #fca5a5}
+.btn-danger:hover{background:#fecaca}
+.btn-success{background:var(--success);color:#fff}
+.btn-success:hover{background:#166534}
+.btn-sm{padding:3px 8px;font-size:11px}
+.btn-full{width:100%}
+.btn-icon{padding:4px 7px;font-size:13px}
+
+/* ── STEP LIST ── */
+.step-list{display:flex;flex-direction:column;gap:2px}
+.section-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;padding:4px 0 4px 2px;margin-top:4px}
+.step-item{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 9px;border-radius:6px;cursor:pointer;
+  transition:all .15s;border:1px solid transparent;
+}
+.step-item:hover{background:var(--primary-soft)}
+.step-item.active{background:var(--primary);color:#fff}
+.step-item.active .step-count{color:rgba(255,255,255,.65)}
+.step-badge{
+  width:19px;height:19px;border-radius:50%;flex-shrink:0;
+  background:var(--border);display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;
+}
+.step-badge.done{background:var(--success);color:#fff}
+.step-badge.running{background:var(--warning);color:#fff;animation:pulse 1s infinite}
+.step-badge.error{background:var(--danger);color:#fff}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.step-label{font-size:12px;line-height:1.3;flex:1}
+.step-count{font-size:10px;color:var(--muted);margin-left:auto}
+
+/* ── MAIN ── */
+.main{flex:1;padding:26px 34px 80px;min-width:0;overflow-y:auto}
+
+.step-panel{display:none}
+.step-panel.active{display:block}
+
+.panel-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  margin-bottom:14px;gap:12px;flex-wrap:wrap;
+}
+.panel-title{font-size:19px;font-weight:800}
+.panel-meta{
+  display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap;
+}
+.sheet-badge{
+  display:inline-block;padding:2px 8px;border-radius:4px;
+  font-size:11px;font-weight:600;background:var(--bg);border:1px solid var(--border);
+  font-family:ui-monospace,monospace;color:var(--text-soft);
+}
+.panel-desc{font-size:12px;color:var(--muted);margin-top:2px}
+.panel-actions{display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}
+
+/* ── PROGRESS ── */
+.prog-wrap{margin-bottom:12px;display:none}
+.prog-wrap.show{display:block}
+.prog-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.prog-label{font-size:12px;color:var(--text-soft)}
+.prog-pct{font-size:11px;color:var(--muted)}
+.prog-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:var(--primary);border-radius:3px;transition:width .3s}
+
+/* ── TABLE ── */
+.table-wrap{
+  overflow-x:auto;border-radius:var(--radius);
+  border:1px solid var(--border);background:var(--panel);
+  box-shadow:var(--shadow);
+}
+.data-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.data-table th{
+  background:var(--bg);padding:9px 11px;text-align:left;
+  font-size:11px;font-weight:700;color:var(--muted);
+  border-bottom:1px solid var(--border);white-space:nowrap;
+  position:sticky;top:0;z-index:1;
+}
+.data-table td{
+  padding:7px 11px;border-bottom:1px solid var(--border);
+  vertical-align:top;
+}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:#fafbfc}
+.data-table td.sn-col{
+  font-family:ui-monospace,monospace;font-size:11px;
+  color:var(--muted);white-space:nowrap;
+}
+
+.editable{
+  outline:none;min-height:1.4em;border-radius:3px;
+  padding:2px 4px;margin:-2px -4px;
+  transition:background .12s;white-space:pre-wrap;word-break:break-word;
+}
+.editable:focus{background:var(--primary-soft);outline:2px solid var(--primary)}
+.editable:empty:before{content:attr(placeholder);color:var(--muted);font-style:italic}
+
+.row-actions{display:flex;gap:4px;align-items:center}
+
+/* ── EMPTY STATE ── */
+.empty-state{
+  text-align:center;padding:60px 20px;color:var(--muted);
+}
+.empty-icon{font-size:42px;margin-bottom:12px}
+.empty-state h3{font-size:15px;margin-bottom:5px;color:var(--text-soft)}
+.empty-state p{font-size:13px}
+
+/* ── ALERT ── */
+.alert{
+  padding:10px 14px;border-radius:6px;font-size:12.5px;
+  display:flex;align-items:flex-start;gap:8px;margin-bottom:13px;
+}
+.alert-info{background:var(--primary-soft);color:var(--primary)}
+.alert-warn{background:var(--warning-soft);color:var(--warning)}
+.alert-err{background:var(--danger-soft);color:var(--danger)}
+
+/* ── TAG ── */
+.tag{
+  display:inline-block;padding:1px 7px;border-radius:10px;
+  font-size:10px;font-weight:700;
+}
+.tag-trial{background:var(--warning-soft);color:var(--warning)}
+.tag-normal{background:var(--primary-soft);color:var(--primary)}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:22px;right:22px;z-index:9999;
+  background:#1f2937;color:#fff;padding:9px 16px;
+  border-radius:8px;font-size:13px;pointer-events:none;
+  animation:slideUp .2s ease;box-shadow:0 4px 14px rgba(0,0,0,.2);
+  max-width:360px;
+}
+.toast.err{background:var(--danger)}
+@keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ── STOP BUTTON ── */
+#stopBtn{display:none}
+#stopBtn.show{display:inline-flex}
+
+/* ── KNOWLEDGE PAIR ── */
+.pair-divider td{background:#f9f6ff;border-top:2px solid var(--primary-soft)!important;padding:4px 11px;font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.4px}
+
+@media(max-width:768px){
+  .app{flex-direction:column}
+  .sidebar{width:100%;height:auto;position:relative}
+  .main{padding:16px 12px 60px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══════════════════════════════ SIDEBAR ═══════════════════════════════ -->
+<aside class="sidebar">
+  <div>
+    <div class="logo">🎓 AI 课程生成器</div>
+    <div class="logo-sub">西语系统课内容自动生成</div>
+  </div>
+
+  <!-- Config -->
+  <div class="config-card">
+    <h3>⚙️ 配置</h3>
+    <div class="field">
+      <label>API 提供方</label>
+      <select id="cfgProvider" onchange="onProviderChange()">
+        <option value="anthropic">Anthropic Claude（推荐）</option>
+        <option value="openai">OpenAI</option>
+        <option value="proxy">Cursor 本地代理</option>
+      </select>
+    </div>
+    <div class="field" id="fieldApiKey">
+      <label id="labelApiKey">API Key</label>
+      <div class="key-wrap">
+        <input type="password" id="cfgApiKey" placeholder="sk-ant-..." oninput="saveConfig()"
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          data-lpignore="true" data-1p-ignore="true" data-bwignore="true">
+        <button class="key-toggle" id="keyToggleBtn" onclick="toggleApiKey()">显示</button>
+      </div>
+    </div>
+    <!-- Proxy info box -->
+    <div id="proxyInfo" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:9px 10px;font-size:11px;color:#92400e;line-height:1.6;margin-bottom:6px">
+      <b>启动本地代理：</b><br>
+      1. 获取 Cursor API Key：<br>
+      <a href="https://cursor.com/dashboard/integrations" target="_blank" style="color:#7C3AED;word-break:break-all">cursor.com/dashboard/integrations</a><br><br>
+      2. 终端运行：<br>
+      <code style="background:#fef3c7;padding:2px 4px;border-radius:3px;font-size:10px;display:block;margin-top:3px">pip install cursor-sdk flask flask-cors</code>
+      <code style="background:#fef3c7;padding:2px 4px;border-radius:3px;font-size:10px;display:block;margin-top:3px">export CURSOR_API_KEY="cursor_..."</code>
+      <code style="background:#fef3c7;padding:2px 4px;border-radius:3px;font-size:10px;display:block;margin-top:3px">python3 scripts/course_gen_proxy.py</code><br>
+      API Key 填 <b>CURSOR_API_KEY</b> 的值 ↓
+    </div>
+    <div class="field">
+      <label>模型</label>
+      <select id="cfgModel" onchange="saveConfig()">
+        <option value="claude-3-5-haiku-20241022">claude-3-5-haiku（快速省钱）</option>
+        <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet（更高质量）</option>
+        <option value="claude-3-haiku-20240307">claude-3-haiku（最便宜）</option>
+      </select>
+    </div>
+    <!-- 模式切换 -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="modeTabCourse" onclick="switchMode('course')">📚 系统课</button>
+      <button class="mode-tab" id="modeTabVocab"  onclick="switchMode('vocab')">🔤 背单词</button>
+    </div>
+  </div>
+
+  <!-- ══ 系统课面板 ══ -->
+  <div class="mode-panel active" id="panelCourse">
+    <!-- 课程参数 -->
+    <div class="config-card" style="margin-top:0">
+      <h3>📚 系统课参数</h3>
+      <div class="field">
+        <label>Course 课程</label>
+        <select id="cfgCourse" onchange="onCourseChange()">
+          <option value="DAILY">Daily</option>
+          <option value="CAREER">Career</option>
+          <option value="TRAVEL">Travel</option>
+          <option value="CUSTOM">✏️ 自定义...</option>
+        </select>
+      </div>
+      <div class="field" id="customCourseField" style="display:none">
+        <label>自定义课程名称</label>
+        <input type="text" id="cfgCustomCourse" placeholder="输入课程名（如：商务英语）" oninput="saveConfig()" maxlength="40">
+      </div>
+      <div class="field">
+        <label>学习语言</label>
+        <select id="cfgLang" onchange="onLangChange()">
+          <option value="Spanish">西语（Spanish）</option>
+          <option value="English">英语（English）</option>
+          <option value="CUSTOM">✏️ 自定义...</option>
+        </select>
+      </div>
+      <div class="field" id="customLangField" style="display:none">
+        <label>自定义语言名称</label>
+        <input type="text" id="cfgCustomLang" placeholder="输入语言（如：French、日语）" oninput="saveConfig()" maxlength="30">
+      </div>
+      <div class="field">
+        <label>Rank 等级</label>
+        <select id="cfgRank" onchange="saveConfig()">
+          <option value="A1">A1</option>
+          <option value="A2">A2</option>
+          <option value="B1">B1</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>单元数量</label>
+        <select id="cfgNumUnits" onchange="onNumUnitsChange()">
+          <option value="3">3 个单元</option>
+          <option value="5" selected>5 个单元</option>
+          <option value="7">7 个单元</option>
+          <option value="10">10 个单元</option>
+          <option value="CUSTOM">✏️ 自定义...</option>
+        </select>
+      </div>
+      <div class="field" id="customNumUnitsField" style="display:none">
+        <label>自定义单元数量</label>
+        <input type="number" id="cfgCustomNumUnits" placeholder="输入数量（如：12）" oninput="saveConfig()" min="1" max="50">
+      </div>
+      <div class="field">
+        <label>每单元课数</label>
+        <select id="cfgNumLessons" onchange="onNumLessonsChange()">
+          <option value="3">3 课（测试用）</option>
+          <option value="7">7 课</option>
+          <option value="14" selected>14 课</option>
+          <option value="21">21 课</option>
+          <option value="CUSTOM">✏️ 自定义...</option>
+        </select>
+      </div>
+      <div class="field" id="customNumLessonsField" style="display:none">
+        <label>自定义每单元课数</label>
+        <input type="number" id="cfgCustomNumLessons" placeholder="输入数量（如：10）" oninput="saveConfig()" min="1" max="60">
+      </div>
+      <div class="field">
+        <label>版本名称 <span style="color:var(--muted);font-weight:400">（可选，用于历史记录）</span></label>
+        <input type="text" id="cfgVersionName" placeholder="如：西语A1-v1、测试版..." oninput="saveConfig()" maxlength="50"
+          autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <button class="btn btn-primary btn-full" id="btnGenAll" onclick="generateAll()">⚡ 一键全部生成</button>
+      <button class="btn btn-full" id="stopBtn" style="background:#fff1f2;color:#dc2626;border:1px solid #fca5a5" onclick="stopGeneration()">⏹ 停止生成</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-success btn-full" onclick="downloadAll()" style="flex:2">📥 下载完整 xlsx</button>
+        <button class="btn btn-danger" onclick="clearAll()" style="flex:1">🗑 清除</button>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-outline btn-full" onclick="saveVersion()" style="flex:1">💾 保存版本</button>
+        <button class="btn btn-outline btn-full" onclick="openHistory()" style="flex:1">🕘 历史生成</button>
+      </div>
+    </div>
+
+    <!-- 步骤列表 -->
+    <div>
+      <div class="section-label">生成步骤</div>
+      <div class="step-list" id="stepList"></div>
+    </div>
+  </div>
+
+  <!-- ══ 背单词面板 ══ -->
+  <div class="mode-panel" id="panelVocab">
+    <div style="background:var(--primary-soft);border-radius:var(--radius);padding:18px 14px;text-align:center;color:var(--primary)">
+      <div style="font-size:28px;margin-bottom:8px">🔤</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">背单词生成</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6">功能开发中，敬请期待</div>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ═══════════════════════════════ MAIN ═══════════════════════════════ -->
+<main class="main">
+  <!-- 系统课主内容 -->
+  <div id="mainContent"></div>
+  <!-- 背单词主内容（占位） -->
+  <div id="mainVocab" style="display:none;padding:60px 20px;text-align:center;color:var(--muted)">
+    <div style="font-size:56px;margin-bottom:16px">🔤</div>
+    <div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:8px">背单词内容生成</div>
+    <div style="font-size:14px;line-height:1.8">此功能正在开发中，敬请期待。<br>配置好 API 后，点击左侧按钮即可开始生成单词卡片内容。</div>
+  </div>
+</main>
+
+</div>
+
+<!-- Toast -->
+<div id="toastEl"></div>
+
+<!-- History Modal -->
+<div id="historyModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(15,23,42,.45);backdrop-filter:blur(3px)" onclick="if(event.target===this)closeHistory()">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(720px,96vw);max-height:85vh;background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden">
+    <!-- Header -->
+    <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--text)">🕘 历史生成记录</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px" id="historyCount"></div>
+      </div>
+      <button onclick="closeHistory()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;padding:4px">×</button>
+    </div>
+    <!-- Body -->
+    <div style="overflow-y:auto;flex:1;padding:14px 20px" id="historyList"></div>
+  </div>
+</div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  CONSTANTS                                                          ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+const STEPS = [
+  {id:1,  key:'units',          label:'生成单元',      sheet:'3-m_unit',             desc:'根据 course + rank 生成学习单元列表'},
+  {id:2,  key:'lessons',        label:'生成课程',      sheet:'4-m_lesson',           desc:'为每个单元生成 lesson 列表（含 lesson_sn）'},
+  {id:3,  key:'dialogs',        label:'生成对话台词',  sheet:'dialog_content',       desc:'每节课生成约 15 秒竖屏情景对话台词'},
+  {id:4,  key:'diagnoses',      label:'诊断题',        sheet:'6-DIAGNOSIS',          desc:'基于对话生成 2 道诊断题及参考答案'},
+  {id:5,  key:'taskDescs',      label:'Roleplay 引导', sheet:'9-TASK_DESC',          desc:'生成 Roleplay 开始前的 transition 引导语'},
+  {id:6,  key:'tasks',          label:'Roleplay 任务', sheet:'10-TASKS',             desc:'基于对话生成 2 个 taskKey + task 描述'},
+  {id:7,  key:'expandWordDescs',label:'词汇引导语',    sheet:'12-EXPAND_WORDS_DESC', desc:'生成拓展词汇环节 transition 引导语'},
+  {id:8,  key:'knowledges',     label:'知识点',        sheet:'13-m_lesson_knowledges',desc:'每节课生成 2 个知识点（+解释+练习引导）'},
+  {id:9,  key:'fl',             label:'跟读练习 FL',   sheet:'14-FL(跟读)',          desc:'每个知识点生成 2 条跟读例句'},
+  {id:10, key:'fb',             label:'补全练习 FB',   sheet:'15-FB(补全)',          desc:'每个知识点生成 2 道填空题'},
+  {id:11, key:'choices',        label:'选择题',        sheet:'16-CHOICE(选择题)',    desc:'每个知识点生成 1 道选择题，正确答案轮换'},
+  {id:12, key:'fillblanks',     label:'连词成句',      sheet:'17-FILLBLANK(连词成句)',desc:'每个知识点生成 1 道连词成句题'},
+  {id:13, key:'expandWords',    label:'拓展词汇',      sheet:'18-拓展词汇',         desc:'每节课生成 3 个拓展词汇（西/中/越/词性）'},
+];
+
+const COURSE_NAMES = {DAILY:'生活西语', TRAVEL:'旅游西语', CAREER:'职场风云'};
+const COURSE_CODES = {DAILY:'daily', TRAVEL:'travel', CAREER:'career'};
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  STATE                                                              ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+let CFG = {apiKey:'',provider:'anthropic',model:'claude-3-5-haiku-20241022',mode:'course',course:'DAILY',customCourse:'',lang:'Spanish',customLang:'',rank:'A1',numUnits:5,customNumUnits:0,numLessons:14,customNumLessons:0};
+let DATA = {units:[],lessons:[],dialogs:[],diagnoses:[],taskDescs:[],tasks:[],
+            expandWordDescs:[],knowledges:[],fl:[],fb:[],choices:[],fillblanks:[],expandWords:[]};
+let STEP_STATUS = {}; // stepId → 'idle'|'running'|'done'|'error'
+let ACTIVE_STEP = 1;
+let IS_GENERATING = false;
+let CANCEL_FLAG = false;
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  CONFIG PERSISTENCE                                                 ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+function onCourseChange() {
+  const val = document.getElementById('cfgCourse').value;
+  document.getElementById('customCourseField').style.display = val === 'CUSTOM' ? '' : 'none';
+  saveConfig();
+}
+function onLangChange() {
+  const val = document.getElementById('cfgLang').value;
+  document.getElementById('customLangField').style.display = val === 'CUSTOM' ? '' : 'none';
+  saveConfig();
+}
+function onNumUnitsChange() {
+  const val = document.getElementById('cfgNumUnits').value;
+  document.getElementById('customNumUnitsField').style.display = val === 'CUSTOM' ? '' : 'none';
+  saveConfig();
+}
+function onNumLessonsChange() {
+  const val = document.getElementById('cfgNumLessons').value;
+  document.getElementById('customNumLessonsField').style.display = val === 'CUSTOM' ? '' : 'none';
+  saveConfig();
+}
+function saveConfig() {
+  CFG.apiKey          = document.getElementById('cfgApiKey').value;
+  CFG.provider        = document.getElementById('cfgProvider').value;
+  CFG.model           = document.getElementById('cfgModel').value;
+  CFG.course          = document.getElementById('cfgCourse').value;
+  CFG.customCourse    = document.getElementById('cfgCustomCourse').value;
+  CFG.lang            = document.getElementById('cfgLang').value;
+  CFG.customLang      = document.getElementById('cfgCustomLang').value;
+  CFG.rank            = document.getElementById('cfgRank').value;
+  const rawUnits      = document.getElementById('cfgNumUnits').value;
+  CFG.numUnits        = rawUnits === 'CUSTOM' ? (parseInt(document.getElementById('cfgCustomNumUnits').value)||5) : +rawUnits;
+  CFG.customNumUnits  = parseInt(document.getElementById('cfgCustomNumUnits').value)||0;
+  const rawLessons    = document.getElementById('cfgNumLessons').value;
+  CFG.numLessons      = rawLessons === 'CUSTOM' ? (parseInt(document.getElementById('cfgCustomNumLessons').value)||14) : +rawLessons;
+  CFG.customNumLessons= parseInt(document.getElementById('cfgCustomNumLessons').value)||0;
+  CFG.versionName     = document.getElementById('cfgVersionName').value;
+  try { localStorage.setItem('cg_cfg', JSON.stringify(CFG)); } catch(e){}
+}
+function loadConfig() {
+  try {
+    const s = localStorage.getItem('cg_cfg');
+    if (s) Object.assign(CFG, JSON.parse(s));
+  } catch(e){}
+  document.getElementById('cfgApiKey').value         = CFG.apiKey||'';
+  document.getElementById('cfgProvider').value       = CFG.provider||'anthropic';
+  document.getElementById('cfgCourse').value         = CFG.course||'DAILY';
+  document.getElementById('cfgCustomCourse').value   = CFG.customCourse||'';
+  document.getElementById('customCourseField').style.display = (CFG.course==='CUSTOM') ? '' : 'none';
+  // lang
+  const savedLang = CFG.lang||'Spanish';
+  document.getElementById('cfgLang').value           = savedLang;
+  document.getElementById('cfgCustomLang').value     = CFG.customLang||'';
+  document.getElementById('customLangField').style.display   = (savedLang==='CUSTOM') ? '' : 'none';
+  document.getElementById('cfgRank').value           = CFG.rank||'A1';
+  // numUnits
+  const numUnitOpts = ['3','5','7','10'];
+  const savedUnits  = String(CFG.numUnits||5);
+  if (numUnitOpts.includes(savedUnits)) {
+    document.getElementById('cfgNumUnits').value = savedUnits;
+    document.getElementById('customNumUnitsField').style.display = 'none';
+  } else {
+    document.getElementById('cfgNumUnits').value = 'CUSTOM';
+    document.getElementById('cfgCustomNumUnits').value = CFG.customNumUnits||CFG.numUnits||5;
+    document.getElementById('customNumUnitsField').style.display = '';
+  }
+  // numLessons
+  const numLessonOpts = ['3','7','14','21'];
+  const savedLessons  = String(CFG.numLessons||14);
+  if (numLessonOpts.includes(savedLessons)) {
+    document.getElementById('cfgNumLessons').value = savedLessons;
+    document.getElementById('customNumLessonsField').style.display = 'none';
+  } else {
+    document.getElementById('cfgNumLessons').value = 'CUSTOM';
+    document.getElementById('cfgCustomNumLessons').value = CFG.customNumLessons||CFG.numLessons||14;
+    document.getElementById('customNumLessonsField').style.display = '';
+  }
+  document.getElementById('cfgVersionName').value    = CFG.versionName||'';
+  onProviderChange(true); // apply model list, then set saved model
+  document.getElementById('cfgModel').value     = CFG.model||'claude-3-5-haiku-20241022';
+  switchMode(CFG.mode||'course');
+}
+function saveData() {
+  try {
+    const payload = JSON.stringify({data: DATA, status: STEP_STATUS});
+    if (payload.length > 4_500_000) { showToast('⚠️ 数据较大，建议及时下载 xlsx 保存', 'warn'); return; }
+    localStorage.setItem('cg_data', payload);
+  } catch(e) { showToast('⚠️ 本地存储已满，建议下载 xlsx', 'warn'); }
+}
+function loadData() {
+  try {
+    const s = localStorage.getItem('cg_data');
+    if (!s) return;
+    const p = JSON.parse(s);
+    if (p.data)   Object.assign(DATA, p.data);
+    if (p.status) Object.assign(STEP_STATUS, p.status);
+  } catch(e){}
+}
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  MULTI-PROVIDER AI                                                  ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+function getSYS() {
+  const {lang} = courseInfo();
+  return `You are a professional ${lang} language curriculum designer creating mobile app content for VeeTalk. Always respond with valid JSON matching the required schema. All ${lang} must use correct accents and punctuation. Chinese translations should be natural. Vietnamese translations must use correct diacritics.`;
+}
+// Keep SYS as getter alias for backward compat
+Object.defineProperty(window, 'SYS', { get: getSYS });
+
+const MODELS = {
+  anthropic: [
+    {value:'claude-3-5-haiku-20241022', label:'claude-3-5-haiku（快速省钱）'},
+    {value:'claude-3-5-sonnet-20241022',label:'claude-3-5-sonnet（更高质量）'},
+    {value:'claude-3-haiku-20240307',   label:'claude-3-haiku（最便宜）'},
+    {value:'claude-3-7-sonnet-20250219',label:'claude-3-7-sonnet（最新）'},
+  ],
+  openai: [
+    {value:'gpt-4o-mini', label:'gpt-4o-mini（快速省钱）'},
+    {value:'gpt-4o',      label:'gpt-4o（更高质量）'},
+    {value:'gpt-4.1',     label:'gpt-4.1'},
+    {value:'gpt-4.1-mini',label:'gpt-4.1-mini'},
+  ],
+  proxy: [
+    {value:'auto', label:'（由代理决定）'},
+  ],
+};
+
+function onProviderChange(silent) {
+  const provider = document.getElementById('cfgProvider').value;
+  // Update model list
+  const sel = document.getElementById('cfgModel');
+  sel.innerHTML = (MODELS[provider]||MODELS.anthropic).map(m=>
+    `<option value="${m.value}">${m.label}</option>`
+  ).join('');
+  // Update API key label & placeholder
+  const label = document.getElementById('labelApiKey');
+  const input = document.getElementById('cfgApiKey');
+  const proxyInfo = document.getElementById('proxyInfo');
+  if (provider === 'anthropic') {
+    label.textContent = 'Anthropic API Key';
+    input.placeholder = 'sk-ant-api03-...';
+    proxyInfo.style.display = 'none';
+  } else if (provider === 'openai') {
+    label.textContent = 'OpenAI API Key';
+    input.placeholder = 'sk-...';
+    proxyInfo.style.display = 'none';
+  } else {
+    label.textContent = 'Cursor API Key（填入 CURSOR_API_KEY）';
+    input.placeholder = 'cursor_...';
+    proxyInfo.style.display = 'block';
+  }
+  if (!silent) saveConfig();
+}
+
+async function ai(userPrompt, maxTokens = 2000) {
+  const provider = CFG.provider || 'anthropic';
+  if (!CFG.apiKey) throw new Error('请先填写 API Key');
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (provider === 'anthropic') return await _callAnthropic(userPrompt, maxTokens);
+      if (provider === 'openai')    return await _callOpenAI(userPrompt, maxTokens);
+      if (provider === 'proxy')     return await _callProxy(userPrompt);
+      throw new Error('未知 provider: ' + provider);
+    } catch(e) {
+      if (attempt === 2) throw e;
+      await sleep(1200 * (attempt + 1));
+    }
+  }
+}
+
+async function _callAnthropic(userPrompt, maxTokens) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{
+      'x-api-key': CFG.apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+      'anthropic-dangerous-direct-browser-calls': 'true',
+    },
+    body: JSON.stringify({
+      model: CFG.model,
+      max_tokens: maxTokens,
+      system: SYS,
+      messages: [{role:'user', content: userPrompt}],
+    }),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(()=>({}));
+    throw new Error(e.error?.message || `Anthropic HTTP ${r.status}`);
+  }
+  const j = await r.json();
+  const text = j.content?.[0]?.text || '';
+  // Extract JSON from response (Anthropic may wrap in prose)
+  const match = text.match(/\{[\s\S]*\}/);
+  return JSON.parse(match ? match[0] : text);
+}
+
+async function _callOpenAI(userPrompt, maxTokens) {
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    method:'POST',
+    headers:{'Authorization':`Bearer ${CFG.apiKey}`,'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model: CFG.model,
+      response_format:{type:'json_object'},
+      messages:[{role:'system',content:SYS},{role:'user',content:userPrompt}],
+      temperature:0.85,
+      max_tokens: maxTokens,
+    }),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(()=>({}));
+    throw new Error(e.error?.message || `OpenAI HTTP ${r.status}`);
+  }
+  const j = await r.json();
+  return JSON.parse(j.choices[0].message.content);
+}
+
+async function _callProxy(userPrompt) {
+  const r = await fetch('http://localhost:8080/generate', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({apiKey: CFG.apiKey, system: SYS, prompt: userPrompt}),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(()=>({}));
+    throw new Error(e.error || `代理服务器 HTTP ${r.status}，请确认已运行 course_gen_proxy.py`);
+  }
+  const j = await r.json();
+  if (j.error) throw new Error(j.error);
+  return JSON.parse(j.content);
+}
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  GENERATION FUNCTIONS                                               ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+function courseInfo() {
+  let name, code;
+  if (CFG.course === 'CUSTOM') {
+    name = (CFG.customCourse||'').trim() || '自定义课程';
+    code = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 20) || 'custom';
+  } else {
+    name = COURSE_NAMES[CFG.course]||CFG.course;
+    code = COURSE_CODES[CFG.course]||CFG.course.toLowerCase();
+  }
+  const lang = CFG.lang === 'CUSTOM' ? ((CFG.customLang||'').trim()||'target language') : (CFG.lang||'Spanish');
+  return { name, code, lang };
+}
+
+async function genUnits() {
+  const {name, lang} = courseInfo();
+  const r = await ai(
+    `Generate exactly ${CFG.numUnits} learning unit themes for a ${CFG.rank} level ${lang} course called "${name}".
+Each unit covers one distinct daily-life topic appropriate for ${CFG.rank} learners.
+Unit titles and topics should be in Chinese (2–5 chars each, distinct from each other).
+Return JSON: {"units":[{"unit_title":"问候","unit_topic":"日常问候场景"}]}`
+  );
+  return (r.units||[]).slice(0, CFG.numUnits).map((u,i)=>({
+    course: CFG.course, rank: CFG.rank,
+    unit_title: u.unit_title||'', unit_topic: u.unit_topic||'',
+    status:1, sequence:i+1,
+  }));
+}
+
+async function genLessonsForUnit(unit, unitIdx) {
+  const {name, code, lang} = courseInfo();
+  const n = CFG.numLessons;
+  const r = await ai(
+    `Generate exactly ${n} ${lang} lessons for the unit "${unit.unit_title}" (topic: ${unit.unit_topic}) in a ${CFG.rank} level course "${name}".
+Rules:
+• lesson_title: in ${lang}, a specific communicative goal (e.g. "Preguntar el camino")
+• lesson_topic: in ${lang}, a 3-6 word description of the lesson scenario
+• lesson_type: first lesson → "TRIAL", all others → "NORMAL"
+• lesson_sn format: VE_ES_${CFG.rank}_${code}_U${unitIdx}_D{XX} (XX = zero-padded index 01–${String(n).padStart(2,'0')})
+• All ${n} lessons must focus on distinct real-life communication sub-scenarios within the unit topic
+Return JSON: {"lessons":[{"lesson_sn":"VE_ES_${CFG.rank}_${code}_U${unitIdx}_D01","lesson_title":"...","lesson_type":"TRIAL","lesson_topic":"..."}]}`,
+    3000
+  );
+  return (r.lessons||[]).slice(0,n).map((l,i)=>({
+    lesson_sn: l.lesson_sn || `VE_ES_${CFG.rank}_${code}_U${unitIdx}_D${String(i+1).padStart(2,'0')}`,
+    course: CFG.course, rank: CFG.rank,
+    unit_title: unit.unit_title, unit_topic: unit.unit_topic,
+    lesson_title: l.lesson_title||'',
+    lesson_type: i===0?'TRIAL':'NORMAL',
+    lesson_topic: l.lesson_topic||'',
+    status:1, sequence:i+1,
+    learning_language:'es-es',
+    round_config:'{"roundList":["VIDEO","KNOWLEDGE","ROLEPLAY"]}',
+  }));
+}
+
+async function genDialog(lesson) {
+  const {lang} = courseInfo();
+  const r = await ai(
+    `Write a short video dialogue for the ${lang} lesson "${lesson.lesson_title}" (${CFG.rank}, unit: ${lesson.unit_title}).
+Requirements:
+• 2 characters with natural-sounding names for ${lang} speakers (unique per lesson)
+• Exactly 4 lines, alternating speakers (2 each)
+• Characters mention each other's names within the lines
+• ~15 seconds when spoken aloud at natural pace
+• Simple, conversational, each line ≤ 10 words
+• One clear communicative purpose matching the lesson title
+Return JSON: {"char1":"Name1","char2":"Name2","dialog":"Name1: ...\nName2: ...\nName1: ...\nName2: ..."}`
+  );
+  return {
+    lesson_sn: lesson.lesson_sn,
+    lesson_title: lesson.lesson_title,
+    char1: r.char1||'Ana', char2: r.char2||'Carlos',
+    dialog: r.dialog||'',
+  };
+}
+
+async function genDiagnosis(lesson, dialog) {
+  const {lang} = courseInfo();
+  const r = await ai(
+    `Based on this ${lang} dialogue for lesson "${lesson.lesson_title}":
+---
+${dialog.dialog}
+---
+Create exactly 2 comprehension questions in ${lang} about the dialogue content.
+Questions should test specific details mentioned in the dialogue.
+Reference answers must come directly from the dialogue text.
+Return JSON: {"diagnoses":[{"diagnosis":"... ?","diagnosisCode":"dno1","referenceAnswer":"..."},{"diagnosis":"... ?","diagnosisCode":"dno2","referenceAnswer":"..."}]}`
+  );
+  return (r.diagnoses||[]).slice(0,2).map((d,i)=>({
+    lesson_sn: lesson.lesson_sn,
+    resource_type:'DIAGNOSIS', seq:i+1,
+    diagnosis: d.diagnosis||'',
+    diagnosisCode: d.diagnosisCode||`dno${i+1}`,
+    referenceAnswer: d.referenceAnswer||'',
+    content_type:'JSONARRAY', status:1, sequence:i+2,
+  }));
+}
+
+async function genTaskDesc(lesson) {
+  const {lang} = courseInfo();
+  const r = await ai(
+    `Write a 1-2 sentence roleplay task introduction in ${lang} for the lesson "${lesson.lesson_title}" (${CFG.rank}).
+This text is shown before learners practice with an AI partner. Encourage them to practice a scenario similar to the lesson video. Keep it motivating and natural.
+Return JSON: {"transition":"...","roundNumber":2}`
+  );
+  return {
+    lesson_sn: lesson.lesson_sn, resource_type:'TASK_DESC',
+    transition: r.transition||'', roundNumber: r.roundNumber||2,
+    content_type:'JSON', status:1, sequence:6,
+  };
+}
+
+async function genTasks(lesson, dialog) {
+  const {lang} = courseInfo();
+  const r = await ai(
+    `Based on this ${lang} dialogue for lesson "${lesson.lesson_title}":
+---
+${dialog.dialog}
+---
+Identify exactly 2 key expressions (taskKey) learners should practice in roleplay.
+For each, write a 1-sentence task description in ${lang} telling learners what to say.
+Return JSON: {"tasks":[{"task":"task description in ${lang}","taskKey":"key expression"},{"task":"...","taskKey":"..."}]}`
+  );
+  return (r.tasks||[]).slice(0,2).map((t,i)=>({
+    lesson_sn: lesson.lesson_sn, resource_type:'TASKS',
+    seq:i+1, task:t.task||'', taskKey:t.taskKey||'',
+    taskNumber:`task${i+1}`, content_type:'JSONARRAY', status:1, sequence:7,
+  }));
+}
+
+async function genExpandWordDesc(lesson) {
+  const {lang} = courseInfo();
+  const r = await ai(
+    `Write exactly 1 sentence in ${lang} as a vocabulary expansion intro for lesson "${lesson.lesson_title}".
+Point learners to useful vocabulary from this lesson to help them reuse key expressions.
+Return JSON: {"transition":"..."}`
+  );
+  return {
+    lesson_sn: lesson.lesson_sn, resource_type:'EXPAND_WORDS_DESC',
+    transition: r.transition||'',
+    content_type:'JSON', status:1, sequence:9,
+  };
+}
+
+async function genKnowledges(lesson, dialog) {
+  const {lang} = courseInfo();
+  const r = await ai(
+    `Based on lesson "${lesson.lesson_title}" (${CFG.rank}) and this dialogue:
+---
+${dialog.dialog}
+---
+Identify exactly 2 key grammar/expression points learners must master.
+For each:
+• point_content: the key phrase/pattern in ${lang} (short)
+• explain: 2-3 sentences in Chinese explaining meaning and natural usage
+• personality: 1 short Chinese practice instruction (e.g. '现在轮到你：用「...」说一句话关于你自己的情况')
+CRITICAL JSON RULE: Do NOT use ASCII double-quote marks (") inside any string value. For quoting terms in Chinese text, use 「」 brackets instead.
+Return JSON: {"knowledges":[{"point_content":"...","explain":"...","personality":"..."},{"point_content":"...","explain":"...","personality":"..."}]}`,
+    2500
+  );
+  return (r.knowledges||[]).slice(0,2).map((k,i)=>({
+    lesson_sn: lesson.lesson_sn, point_type:'WORDS',
+    point_content:k.point_content||'', explain:k.explain||'',
+    personality:k.personality||'', status:1, sequence:i,
+  }));
+}
+
+async function genFL(lesson, knowledge) {
+  const {lang} = courseInfo();
+  const r = await ai(
+    `For ${lang} knowledge point "${knowledge.point_content}" from lesson "${lesson.lesson_title}" (${CFG.rank}):
+Create exactly 2 follow-along reading sentences (varied contexts, both naturally using the knowledge point).
+For each sentence:
+• sentence: natural ${lang} sentence using the knowledge point
+• sentence_define: Chinese translation (natural)
+• sentence_words: JSON array tokenising the sentence. Split by spaces, keep punctuation as own tokens, add " " between every word token.
+• defineKey_word: exactly "${knowledge.point_content}"
+Return JSON: {"fl":[{"sentence":"...","sentence_define":"...","sentence_words":[...],"defineKey_word":"${knowledge.point_content}"},{"sentence":"...","sentence_define":"...","sentence_words":[...],"defineKey_word":"${knowledge.point_content}"}]}`,
+    2500
+  );
+  return (r.fl||[]).slice(0,2).map((f,i)=>({
+    lesson_sn:lesson.lesson_sn, point_content:knowledge.point_content,
+    sentence_type:'FL', sentence:f.sentence||'',
+    sentence_define:f.sentence_define||'',
+    sentence_words:JSON.stringify(f.sentence_words||[]),
+    defineKey_word:knowledge.point_content,
+    keyword_index:'[]', status:1, sequence:i,
+  }));
+}
+
+async function genFB(lesson, knowledge) {
+  const {lang} = courseInfo();
+  const r = await ai(
+    `For ${lang} knowledge point "${knowledge.point_content}" from lesson "${lesson.lesson_title}" (${CFG.rank}):
+Create exactly 2 fill-in-the-blank exercises (each a different sentence).
+For each:
+• sentence: complete ${lang} sentence using the knowledge point
+• sentence_define: Chinese translation
+• sentence_words: JSON array tokenising the sentence (same format as FL — words + " " separators + punctuation tokens)
+• blank_index: JSON array of exactly 2 integer indices (0-based) in sentence_words to blank out — target the key words of the knowledge point
+• 挖空内容: the blanked tokens joined by comma
+Return JSON: {"fb":[{"sentence":"...","sentence_define":"...","sentence_words":[...],"blank_index":[N,M],"挖空内容":"word1,word2"},{"sentence":"...","sentence_define":"...","sentence_words":[...],"blank_index":[N,M],"挖空内容":"word1,word2"}]}`,
+    2500
+  );
+  return (r.fb||[]).slice(0,2).map((f,i)=>({
+    lesson_sn:lesson.lesson_sn, point_content:knowledge.point_content,
+    sentence_type:'FB', sentence:f.sentence||'',
+    sentence_define:f.sentence_define||'',
+    sentence_words:JSON.stringify(f.sentence_words||[]),
+    blank_index:JSON.stringify(f.blank_index||[]),
+    '挖空内容':f['挖空内容']||'', status:1, sequence:i,
+  }));
+}
+
+let _choiceAnswerCycle = 0;
+async function genChoice(lesson, knowledge) {
+  const {lang} = courseInfo();
+  const ans = ['A','B','C','D'][_choiceAnswerCycle % 4];
+  _choiceAnswerCycle++;
+  const r = await ai(
+    `For ${lang} knowledge point "${knowledge.point_content}" from lesson "${lesson.lesson_title}" (${CFG.rank}):
+Create 1 multiple choice question.
+• stem: ask in ${lang} which sentence best uses the expression «${knowledge.point_content}»
+• Option ${ans} must be the correct sentence naturally using "${knowledge.point_content}"
+• The other 3 options must be unrelated grammatically-correct ${lang} sentences that do NOT use "${knowledge.point_content}"
+• question_id: "qes-" + 12 random lowercase hex chars
+Return JSON: {"question_id":"qes-...","stem":"... ?","A":"...","B":"...","C":"...","D":"...","answer":"${ans}"}`
+  );
+  return {
+    lesson_sn:lesson.lesson_sn, point_content:knowledge.point_content,
+    question_type:'CHOICE',
+    question_id:r.question_id||`qes-${randHex(12)}`,
+    stem:r.stem||'', A:r.A||'', B:r.B||'', C:r.C||'', D:r.D||'',
+    answer:r.answer||ans, status:1, sequence:0,
+  };
+}
+
+async function genFillblank(lesson, knowledge) {
+  const {lang} = courseInfo();
+  const r = await ai(
+    `For ${lang} knowledge point "${knowledge.point_content}" from lesson "${lesson.lesson_title}" (${CFG.rank}):
+Create 1 word-ordering (sentence reconstruction) exercise.
+• stem: a complete ${lang} sentence (5-9 words) naturally using the knowledge point
+• stem_array: content words of the sentence shuffled randomly (exclude opening punctuation marks and closing . ? !, keep only content words, shuffle them)
+• right_array: the original complete sentence as a string (identical to stem)
+• question_id: "qes-" + 12 random lowercase hex chars
+Return JSON: {"question_id":"qes-...","stem":"...","stem_array":["word1","word2","..."],"right_array":"original sentence"}`
+  );
+  return {
+    lesson_sn:lesson.lesson_sn, point_content:knowledge.point_content,
+    question_type:'FILLBLANK',
+    question_id:r.question_id||`qes-${randHex(12)}`,
+    stem:r.stem||'',
+    stem_array:JSON.stringify(r.stem_array||[]),
+    right_array:r.right_array||r.stem||'',
+    status:1, sequence:0,
+  };
+}
+
+async function genExpandWords(lesson, knowledges) {
+  const {lang} = courseInfo();
+  const pts = knowledges.map(k=>k.point_content).join('", "');
+  const r = await ai(
+    `For ${lang} lesson "${lesson.lesson_title}" with knowledge points "${pts}":
+Generate exactly 3 vocabulary words in ${lang} related to the lesson topic (do not repeat the knowledge points themselves).
+For each:
+• es: ${lang} word/expression
+• zh: concise natural Chinese meaning
+• vi: Vietnamese meaning (correct diacritics)
+• pos: abbreviated part of speech — one of: n. v. adj. adv. prep. pron. conj. interj.
+Return JSON: {"words":[{"es":"...","zh":"...","vi":"...","pos":"n."},...]}`
+  );
+  return (r.words||[]).slice(0,3).map((w,i)=>({
+    lesson_sn:lesson.lesson_sn, seq:i+1,
+    es:w.es||'', zh:w.zh||'', vi:w.vi||'', pos:w.pos||'n.',
+  }));
+}
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  STEP RUNNERS                                                       ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+async function runStep(stepId) {
+  const lessons = DATA.lessons;
+  const check = (dep, msg) => { if (!DATA[dep].length) throw new Error(msg); };
+
+  switch(stepId) {
+    case 1: {
+      setProgress(1,0,1,'正在生成单元...');
+      DATA.units = await ai_step1();
+      setProgress(1,1,1);
+      break;
+    }
+    case 2: {
+      check('units','请先完成步骤 1（生成单元）');
+      DATA.lessons = [];
+      for(let i=0;i<DATA.units.length;i++){
+        if(CANCEL_FLAG) return;
+        setProgress(2,i,DATA.units.length,`单元 ${i+1}/${DATA.units.length}: ${DATA.units[i].unit_title}`);
+        DATA.lessons.push(...await genLessonsForUnit(DATA.units[i], i+1));
+        await sleep(300);
+      }
+      setProgress(2,DATA.units.length,DATA.units.length);
+      break;
+    }
+    case 3: {
+      check('lessons','请先完成步骤 2（生成课程）');
+      DATA.dialogs = [];
+      for(let i=0;i<lessons.length;i++){
+        if(CANCEL_FLAG) return;
+        setProgress(3,i,lessons.length,lessons[i].lesson_title);
+        DATA.dialogs.push(await genDialog(lessons[i]));
+        await sleep(250);
+      }
+      setProgress(3,lessons.length,lessons.length);
+      break;
+    }
+    case 4: {
+      check('dialogs','请先完成步骤 3（生成对话）');
+      DATA.diagnoses = [];
+      for(let i=0;i<lessons.length;i++){
+        if(CANCEL_FLAG) return;
+        setProgress(4,i,lessons.length,lessons[i].lesson_title);
+        const d = DATA.dialogs.find(x=>x.lesson_sn===lessons[i].lesson_sn);
+        if(d) DATA.diagnoses.push(...await genDiagnosis(lessons[i],d));
+        await sleep(250);
+      }
+      setProgress(4,lessons.length,lessons.length);
+      break;
+    }
+    case 5: {
+      check('lessons','请先完成步骤 2（生成课程）');
+      DATA.taskDescs = [];
+      for(let i=0;i<lessons.length;i++){
+        if(CANCEL_FLAG) return;
+        setProgress(5,i,lessons.length,lessons[i].lesson_title);
+        DATA.taskDescs.push(await genTaskDesc(lessons[i]));
+        await sleep(250);
+      }
+      setProgress(5,lessons.length,lessons.length);
+      break;
+    }
+    case 6: {
+      check('dialogs','请先完成步骤 3（生成对话）');
+      DATA.tasks = [];
+      for(let i=0;i<lessons.length;i++){
+        if(CANCEL_FLAG) return;
+        setProgress(6,i,lessons.length,lessons[i].lesson_title);
+        const d = DATA.dialogs.find(x=>x.lesson_sn===lessons[i].lesson_sn);
+        if(d) DATA.tasks.push(...await genTasks(lessons[i],d));
+        await sleep(250);
+      }
+      setProgress(6,lessons.length,lessons.length);
+      break;
+    }
+    case 7: {
+      check('lessons','请先完成步骤 2（生成课程）');
+      DATA.expandWordDescs = [];
+      for(let i=0;i<lessons.length;i++){
+        if(CANCEL_FLAG) return;
+        setProgress(7,i,lessons.length,lessons[i].lesson_title);
+        DATA.expandWordDescs.push(await genExpandWordDesc(lessons[i]));
+        await sleep(250);
+      }
+      setProgress(7,lessons.length,lessons.length);
+      break;
+    }
+    case 8: {
+      check('dialogs','请先完成步骤 3（生成对话）');
+      DATA.knowledges = [];
+      for(let i=0;i<lessons.length;i++){
+        if(CANCEL_FLAG) return;
+        setProgress(8,i,lessons.length,lessons[i].lesson_title);
+        const d = DATA.dialogs.find(x=>x.lesson_sn===lessons[i].lesson_sn);
+        if(d) DATA.knowledges.push(...await genKnowledges(lessons[i],d));
+        await sleep(250);
+      }
+      setProgress(8,lessons.length,lessons.length);
+      break;
+    }
+    case 9: {
+      check('knowledges','请先完成步骤 8（生成知识点）');
+      DATA.fl = [];
+      for(let i=0;i<DATA.knowledges.length;i++){
+        if(CANCEL_FLAG) return;
+        const k = DATA.knowledges[i];
+        setProgress(9,i,DATA.knowledges.length,k.point_content);
+        const l = lessons.find(x=>x.lesson_sn===k.lesson_sn);
+        if(l) DATA.fl.push(...await genFL(l,k));
+        await sleep(250);
+      }
+      setProgress(9,DATA.knowledges.length,DATA.knowledges.length);
+      break;
+    }
+    case 10: {
+      check('knowledges','请先完成步骤 8（生成知识点）');
+      DATA.fb = [];
+      for(let i=0;i<DATA.knowledges.length;i++){
+        if(CANCEL_FLAG) return;
+        const k = DATA.knowledges[i];
+        setProgress(10,i,DATA.knowledges.length,k.point_content);
+        const l = lessons.find(x=>x.lesson_sn===k.lesson_sn);
+        if(l) DATA.fb.push(...await genFB(l,k));
+        await sleep(250);
+      }
+      setProgress(10,DATA.knowledges.length,DATA.knowledges.length);
+      break;
+    }
+    case 11: {
+      check('knowledges','请先完成步骤 8（生成知识点）');
+      DATA.choices = [];
+      _choiceAnswerCycle = 0;
+      for(let i=0;i<DATA.knowledges.length;i++){
+        if(CANCEL_FLAG) return;
+        const k = DATA.knowledges[i];
+        setProgress(11,i,DATA.knowledges.length,k.point_content);
+        const l = lessons.find(x=>x.lesson_sn===k.lesson_sn);
+        if(l) DATA.choices.push(await genChoice(l,k));
+        await sleep(250);
+      }
+      setProgress(11,DATA.knowledges.length,DATA.knowledges.length);
+      break;
+    }
+    case 12: {
+      check('knowledges','请先完成步骤 8（生成知识点）');
+      DATA.fillblanks = [];
+      for(let i=0;i<DATA.knowledges.length;i++){
+        if(CANCEL_FLAG) return;
+        const k = DATA.knowledges[i];
+        setProgress(12,i,DATA.knowledges.length,k.point_content);
+        const l = lessons.find(x=>x.lesson_sn===k.lesson_sn);
+        if(l) DATA.fillblanks.push(await genFillblank(l,k));
+        await sleep(250);
+      }
+      setProgress(12,DATA.knowledges.length,DATA.knowledges.length);
+      break;
+    }
+    case 13: {
+      check('knowledges','请先完成步骤 8（生成知识点）');
+      DATA.expandWords = [];
+      for(let i=0;i<lessons.length;i++){
+        if(CANCEL_FLAG) return;
+        setProgress(13,i,lessons.length,lessons[i].lesson_title);
+        const ks = DATA.knowledges.filter(k=>k.lesson_sn===lessons[i].lesson_sn);
+        DATA.expandWords.push(...await genExpandWords(lessons[i],ks));
+        await sleep(250);
+      }
+      setProgress(13,lessons.length,lessons.length);
+      break;
+    }
+  }
+}
+
+// step 1 helper (separate to allow reuse)
+async function ai_step1() {
+  return await genUnits();
+}
+
+// ── ORCHESTRATION ──────────────────────────────────────────────────────
+async function generateStep(stepId) {
+  if (!CFG.apiKey) { showToast('请先填写 OpenAI API Key','err'); return; }
+  try {
+    STEP_STATUS[stepId] = 'running';
+    renderSidebar();
+    await runStep(stepId);
+    STEP_STATUS[stepId] = CANCEL_FLAG ? 'idle' : 'done';
+    saveData();
+    renderSidebar();
+    refreshTable(stepId);
+    if (!CANCEL_FLAG) showToast(`✓ 步骤 ${stepId} 完成（${getStepData(stepId).length} 条）`);
+  } catch(e) {
+    STEP_STATUS[stepId] = 'error';
+    renderSidebar();
+    showToast(`步骤 ${stepId} 失败: ${e.message}`, 'err');
+    console.error(e);
+    throw e;
+  }
+}
+
+async function generateAll() {
+  if (!CFG.apiKey) { showToast('请先填写 OpenAI API Key','err'); return; }
+  if (IS_GENERATING) return;
+  IS_GENERATING = true; CANCEL_FLAG = false;
+  document.getElementById('btnGenAll').disabled = true;
+  document.getElementById('stopBtn').classList.add('show');
+  try {
+    for(let step=1; step<=13; step++){
+      if(CANCEL_FLAG){ showToast('已停止'); break; }
+      if(STEP_STATUS[step]==='done'){ continue; }
+      switchStep(step);
+      await generateStep(step);
+    }
+    if(!CANCEL_FLAG) {
+      showToast('🎉 全部 13 步生成完成！');
+      saveVersion(true); // auto-save on completion
+    }
+  } catch(e) {
+    showToast('生成中断，可继续点击对应步骤的「生成」按钮','err');
+  } finally {
+    IS_GENERATING = false;
+    document.getElementById('btnGenAll').disabled = false;
+    document.getElementById('stopBtn').classList.remove('show');
+  }
+}
+
+function stopGeneration() {
+  CANCEL_FLAG = true;
+  showToast('正在停止...');
+}
+
+async function regenerateRow(stepId, rowIdx) {
+  if (!CFG.apiKey) { showToast('请先填写 API Key','err'); return; }
+  const data = getStepData(stepId);
+  const row = data[rowIdx];
+  if (!row) return;
+
+  showToast('重新生成中...');
+  try {
+    const lessons = DATA.lessons;
+    switch(stepId){
+      case 1: {
+        const units = await genUnits();
+        if(units[rowIdx]) data[rowIdx] = units[rowIdx];
+        break;
+      }
+      case 2: {
+        const lesson = row;
+        const unitIdx = DATA.units.findIndex(u=>u.unit_title===lesson.unit_title)+1;
+        const unit = DATA.units[unitIdx-1];
+        if(!unit) break;
+        const newL = await genLessonsForUnit(unit, unitIdx);
+        const seqIdx = lesson.sequence - 1;
+        if(newL[seqIdx]) data[rowIdx] = newL[seqIdx];
+        break;
+      }
+      case 3: {
+        const lesson = lessons.find(l=>l.lesson_sn===row.lesson_sn);
+        if(lesson){ data[rowIdx] = await genDialog(lesson); }
+        break;
+      }
+      case 4: {
+        const lesson = lessons.find(l=>l.lesson_sn===row.lesson_sn);
+        const dialog = DATA.dialogs.find(d=>d.lesson_sn===row.lesson_sn);
+        if(lesson&&dialog){
+          const newD = await genDiagnosis(lesson,dialog);
+          const others = DATA.diagnoses.filter(d=>d.lesson_sn!==row.lesson_sn);
+          DATA.diagnoses = [...others, ...newD];
+        }
+        break;
+      }
+      case 5: {
+        const lesson = lessons.find(l=>l.lesson_sn===row.lesson_sn);
+        if(lesson){ data[rowIdx] = await genTaskDesc(lesson); }
+        break;
+      }
+      case 6: {
+        const lesson = lessons.find(l=>l.lesson_sn===row.lesson_sn);
+        const dialog = DATA.dialogs.find(d=>d.lesson_sn===row.lesson_sn);
+        if(lesson&&dialog){
+          const newT = await genTasks(lesson,dialog);
+          const others = DATA.tasks.filter(t=>t.lesson_sn!==row.lesson_sn);
+          DATA.tasks = [...others, ...newT];
+        }
+        break;
+      }
+      case 7: {
+        const lesson = lessons.find(l=>l.lesson_sn===row.lesson_sn);
+        if(lesson){ data[rowIdx] = await genExpandWordDesc(lesson); }
+        break;
+      }
+      case 8: {
+        const lesson = lessons.find(l=>l.lesson_sn===row.lesson_sn);
+        const dialog = DATA.dialogs.find(d=>d.lesson_sn===row.lesson_sn);
+        if(lesson&&dialog){
+          const newK = await genKnowledges(lesson,dialog);
+          const others = DATA.knowledges.filter(k=>k.lesson_sn!==row.lesson_sn);
+          DATA.knowledges = [...others, ...newK];
+        }
+        break;
+      }
+      case 9: {
+        const lesson = lessons.find(l=>l.lesson_sn===row.lesson_sn);
+        const k = DATA.knowledges.find(x=>x.lesson_sn===row.lesson_sn&&x.point_content===row.point_content);
+        if(lesson&&k){
+          const newF = await genFL(lesson,k);
+          const others = DATA.fl.filter(f=>!(f.lesson_sn===row.lesson_sn&&f.point_content===row.point_content));
+          DATA.fl = [...others, ...newF];
+        }
+        break;
+      }
+      case 10: {
+        const lesson = lessons.find(l=>l.lesson_sn===row.lesson_sn);
+        const k = DATA.knowledges.find(x=>x.lesson_sn===row.lesson_sn&&x.point_content===row.point_content);
+        if(lesson&&k){
+          const newF = await genFB(lesson,k);
+          const others = DATA.fb.filter(f=>!(f.lesson_sn===row.lesson_sn&&f.point_content===row.point_content));
+          DATA.fb = [...others, ...newF];
+        }
+        break;
+      }
+      case 11: {
+        const lesson = lessons.find(l=>l.lesson_sn===row.lesson_sn);
+        const k = DATA.knowledges.find(x=>x.lesson_sn===row.lesson_sn&&x.point_content===row.point_content);
+        if(lesson&&k){ data[rowIdx] = await genChoice(lesson,k); }
+        break;
+      }
+      case 12: {
+        const lesson = lessons.find(l=>l.lesson_sn===row.lesson_sn);
+        const k = DATA.knowledges.find(x=>x.lesson_sn===row.lesson_sn&&x.point_content===row.point_content);
+        if(lesson&&k){ data[rowIdx] = await genFillblank(lesson,k); }
+        break;
+      }
+      case 13: {
+        const lesson = lessons.find(l=>l.lesson_sn===row.lesson_sn);
+        if(lesson){
+          const ks = DATA.knowledges.filter(k=>k.lesson_sn===lesson.lesson_sn);
+          const newW = await genExpandWords(lesson,ks);
+          const others = DATA.expandWords.filter(w=>w.lesson_sn!==lesson.lesson_sn);
+          DATA.expandWords = [...others, ...newW];
+        }
+        break;
+      }
+    }
+    saveData();
+    refreshTable(stepId);
+    showToast('✓ 重新生成完成');
+  } catch(e) {
+    showToast(`重新生成失败: ${e.message}`,'err');
+  }
+}
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  PROGRESS                                                           ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+function setProgress(stepId, cur, total, label='') {
+  const wrap = document.getElementById(`prog-${stepId}`);
+  const fill = document.getElementById(`progfill-${stepId}`);
+  const txt  = document.getElementById(`progtxt-${stepId}`);
+  const pct  = document.getElementById(`progpct-${stepId}`);
+  if(!wrap) return;
+  wrap.classList.add('show');
+  const perc = total>0 ? Math.round((cur/total)*100) : 0;
+  if(fill) fill.style.width = perc+'%';
+  if(txt)  txt.textContent  = label||'生成中...';
+  if(pct)  pct.textContent  = `${cur}/${total}`;
+  if(cur>=total) setTimeout(()=>wrap.classList.remove('show'), 2500);
+}
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  DATA GETTERS                                                       ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+function getStepData(stepId) {
+  const map = {
+    1:DATA.units, 2:DATA.lessons, 3:DATA.dialogs, 4:DATA.diagnoses,
+    5:DATA.taskDescs, 6:DATA.tasks, 7:DATA.expandWordDescs, 8:DATA.knowledges,
+    9:DATA.fl, 10:DATA.fb, 11:DATA.choices, 12:DATA.fillblanks, 13:DATA.expandWords,
+  };
+  return map[stepId]||[];
+}
+
+function getStepCols(stepId) {
+  const C = {
+    1:[
+      {k:'unit_title',  l:'unit_title',  w:'140px'},
+      {k:'unit_topic',  l:'unit_topic',  w:'160px'},
+      {k:'sequence',    l:'排序',        w:'60px', mono:true},
+    ],
+    2:[
+      {k:'lesson_sn',   l:'lesson_sn',   w:'220px', mono:true, ro:true},
+      {k:'unit_title',  l:'所属unit',    w:'90px',  ro:true},
+      {k:'lesson_title',l:'lesson_title',w:'200px'},
+      {k:'lesson_type', l:'type',        w:'70px',  tag:true},
+      {k:'lesson_topic',l:'lesson_topic',w:'220px'},
+    ],
+    3:[
+      {k:'lesson_sn',  l:'lesson_sn',  w:'200px', mono:true, ro:true},
+      {k:'lesson_title',l:'课程名',    w:'160px', ro:true},
+      {k:'char1',      l:'角色1',      w:'70px'},
+      {k:'char2',      l:'角色2',      w:'70px'},
+      {k:'dialog',     l:'对话台词 dialog_content', w:'380px'},
+    ],
+    4:[
+      {k:'lesson_sn',      l:'lesson_sn',       w:'180px', mono:true, ro:true},
+      {k:'seq',            l:'序号',             w:'50px', ro:true},
+      {k:'diagnosis',      l:'diagnosis (西语)', w:'250px'},
+      {k:'diagnosisCode',  l:'code',             w:'60px', mono:true},
+      {k:'referenceAnswer',l:'referenceAnswer',  w:'220px'},
+    ],
+    5:[
+      {k:'lesson_sn', l:'lesson_sn', w:'200px', mono:true, ro:true},
+      {k:'transition',l:'transition',w:'400px'},
+      {k:'roundNumber',l:'rounds',  w:'60px'},
+    ],
+    6:[
+      {k:'lesson_sn',l:'lesson_sn',  w:'180px', mono:true, ro:true},
+      {k:'seq',      l:'序号',       w:'50px', ro:true},
+      {k:'task',     l:'task (西语)',w:'280px'},
+      {k:'taskKey',  l:'taskKey',   w:'160px'},
+    ],
+    7:[
+      {k:'lesson_sn', l:'lesson_sn', w:'200px', mono:true, ro:true},
+      {k:'transition',l:'transition (EXPAND_WORDS_DESC)',w:'420px'},
+    ],
+    8:[
+      {k:'lesson_sn',    l:'lesson_sn',   w:'180px', mono:true, ro:true},
+      {k:'point_content',l:'point_content',w:'140px'},
+      {k:'explain',      l:'explain (中文)',w:'300px'},
+      {k:'personality',  l:'personality',  w:'220px'},
+    ],
+    9:[
+      {k:'lesson_sn',     l:'lesson_sn',       w:'180px', mono:true, ro:true},
+      {k:'point_content', l:'知识点',           w:'120px', ro:true},
+      {k:'sentence',      l:'sentence (西语)',  w:'230px'},
+      {k:'sentence_define',l:'sentence_define', w:'180px'},
+      {k:'sentence_words',l:'sentence_words',  w:'250px', mono:true},
+      {k:'defineKey_word',l:'defineKey_word',  w:'120px'},
+    ],
+    10:[
+      {k:'lesson_sn',     l:'lesson_sn',    w:'180px', mono:true, ro:true},
+      {k:'point_content', l:'知识点',       w:'120px', ro:true},
+      {k:'sentence',      l:'sentence',     w:'230px'},
+      {k:'sentence_define',l:'sentence_define',w:'180px'},
+      {k:'sentence_words',l:'sentence_words',w:'240px', mono:true},
+      {k:'blank_index',   l:'blank_index',  w:'80px', mono:true},
+      {k:'挖空内容',      l:'挖空内容(参考)',w:'100px'},
+    ],
+    11:[
+      {k:'lesson_sn',   l:'lesson_sn',  w:'160px', mono:true, ro:true},
+      {k:'point_content',l:'知识点',    w:'110px', ro:true},
+      {k:'question_id', l:'question_id',w:'160px', mono:true},
+      {k:'stem',        l:'stem',       w:'240px'},
+      {k:'A',           l:'A',          w:'140px'},
+      {k:'B',           l:'B',          w:'140px'},
+      {k:'C',           l:'C',          w:'140px'},
+      {k:'D',           l:'D',          w:'140px'},
+      {k:'answer',      l:'正确答案',   w:'60px', mono:true},
+    ],
+    12:[
+      {k:'lesson_sn',   l:'lesson_sn',  w:'160px', mono:true, ro:true},
+      {k:'point_content',l:'知识点',    w:'110px', ro:true},
+      {k:'question_id', l:'question_id',w:'160px', mono:true},
+      {k:'stem',        l:'stem',       w:'220px'},
+      {k:'stem_array',  l:'stem_array', w:'200px', mono:true},
+      {k:'right_array', l:'right_array',w:'200px'},
+    ],
+    13:[
+      {k:'lesson_sn',l:'lesson_sn', w:'180px', mono:true, ro:true},
+      {k:'seq',      l:'序号',      w:'50px', ro:true},
+      {k:'es',       l:'词汇(西语)',w:'120px'},
+      {k:'zh',       l:'词汇(中文)',w:'100px'},
+      {k:'vi',       l:'词汇(越南)',w:'120px'},
+      {k:'pos',      l:'词性',      w:'60px'},
+    ],
+  };
+  return C[stepId]||[];
+}
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  RENDER                                                             ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+function renderSidebar() {
+  const list = document.getElementById('stepList');
+  list.innerHTML = STEPS.map(s=>{
+    const status = STEP_STATUS[s.id]||'idle';
+    const count = getStepData(s.id).length;
+    let bc='', bi=s.id;
+    if(status==='done')   { bc='done';    bi='✓'; }
+    if(status==='running'){ bc='running'; bi='...'; }
+    if(status==='error')  { bc='error';   bi='!'; }
+    const active = ACTIVE_STEP===s.id;
+    return `<div class="step-item ${active?'active':''}" onclick="switchStep(${s.id})">
+      <div class="step-badge ${bc}">${bi}</div>
+      <div class="step-label">${s.label}</div>
+      ${count>0?`<div class="step-count">${count}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function renderAllPanels() {
+  document.getElementById('mainContent').innerHTML = STEPS.map(s=>`
+    <section class="step-panel ${ACTIVE_STEP===s.id?'active':''}" id="panel-${s.id}">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Step ${s.id}：${s.label}</div>
+          <div class="panel-meta">
+            <span class="sheet-badge">${s.sheet}</span>
+            <span class="panel-desc">${s.desc}</span>
+          </div>
+        </div>
+        <div class="panel-actions">
+          <button class="btn btn-primary" onclick="generateStep(${s.id})">⚡ 生成此步骤</button>
+          <button class="btn btn-outline" onclick="downloadStep(${s.id})">⬇ 下载 xlsx</button>
+        </div>
+      </div>
+      <div class="prog-wrap" id="prog-${s.id}">
+        <div class="prog-header">
+          <span class="prog-label" id="progtxt-${s.id}">生成中...</span>
+          <span class="prog-pct" id="progpct-${s.id}">0/0</span>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" id="progfill-${s.id}" style="width:0%"></div></div>
+      </div>
+      <div id="tbl-${s.id}">${renderTable(s.id)}</div>
+    </section>
+  `).join('');
+}
+
+function refreshTable(stepId) {
+  const el = document.getElementById(`tbl-${stepId}`);
+  if(el) el.innerHTML = renderTable(stepId);
+}
+
+function renderTable(stepId) {
+  const data = getStepData(stepId);
+  if(!data.length) return `
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <h3>暂无数据</h3>
+      <p>点击上方「生成此步骤」按钮开始 AI 生成</p>
+    </div>`;
+
+  const cols = getStepCols(stepId);
+  // For steps 8,9,10 show group dividers by lesson_sn
+  const showPairDivider = [8,9,10,11,12].includes(stepId);
+
+  let rows = '';
+  let prevGroupKey = null;
+
+  data.forEach((row, i) => {
+    // Group divider for knowledge-paired steps
+    if(showPairDivider) {
+      const groupKey = stepId===8 ? row.lesson_sn : `${row.lesson_sn}::${row.point_content||''}`;
+      if(groupKey !== prevGroupKey) {
+        const divLabel = stepId===8
+          ? (DATA.lessons.find(l=>l.lesson_sn===row.lesson_sn)?.lesson_title || row.lesson_sn)
+          : `${row.point_content||'—'} · ${DATA.lessons.find(l=>l.lesson_sn===row.lesson_sn)?.lesson_title||row.lesson_sn}`;
+        rows += `<tr class="pair-divider"><td colspan="${cols.length+1}">${escHtml(divLabel)}</td></tr>`;
+        prevGroupKey = groupKey;
+      }
+    }
+
+    const cells = cols.map(c => {
+      const val = String(row[c.k]??'');
+      const style = c.w ? `min-width:${c.w};max-width:${c.w}` : '';
+
+      if(c.tag && val) {
+        const tagCls = val==='TRIAL'?'tag-trial':'tag-normal';
+        return `<td style="${style}"><span class="tag ${tagCls}">${escHtml(val)}</span></td>`;
+      }
+      if(c.ro) {
+        const mStyle = c.mono ? 'font-family:ui-monospace,monospace;font-size:11px;color:var(--muted)' : '';
+        return `<td class="${c.mono?'sn-col':''}" style="${style}"><span style="${mStyle}">${escHtml(val)}</span></td>`;
+      }
+      const mStyle = c.mono ? 'font-family:ui-monospace,monospace;font-size:11px' : '';
+      return `<td style="${style}">
+        <div class="editable" contenteditable="true" style="${mStyle}"
+          onblur="cellEdit(${stepId},${i},'${c.k}',this)"
+          >${escHtml(val)}</div>
+      </td>`;
+    }).join('');
+
+    rows += `<tr>
+      ${cells}
+      <td style="width:60px">
+        <div class="row-actions">
+          <button class="btn btn-sm btn-outline btn-icon" title="重新生成此行" onclick="regenerateRow(${stepId},${i})">↺</button>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  return `<div class="table-wrap">
+    <table class="data-table">
+      <thead><tr>
+        ${cols.map(c=>`<th style="${c.w?`min-width:${c.w}`:''}">
+          ${escHtml(c.l)}</th>`).join('')}
+        <th style="width:60px">操作</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function switchStep(stepId) {
+  ACTIVE_STEP = stepId;
+  document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));
+  const panel = document.getElementById(`panel-${stepId}`);
+  if(panel) {
+    panel.classList.add('active');
+    refreshTable(stepId);
+  }
+  renderSidebar();
+}
+
+function cellEdit(stepId, rowIdx, key, el) {
+  const data = getStepData(stepId);
+  if(data[rowIdx]) {
+    data[rowIdx][key] = el.innerText;
+    saveData();
+  }
+}
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  DOWNLOAD                                                           ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+function buildRows(stepId, data) {
+  const sheetName = STEPS.find(s=>s.id===stepId)?.sheet||'';
+  const HEADERS = {
+    '3-m_unit':['所属course (关联用)','所属rank (关联用)','unit_title [DB: unit_title]','unit_topic [DB: unit_topic]','status [DB: status]','sequence [DB: sequence]'],
+    '4-m_lesson':['lesson_sn [DB: lesson_sn]','所属course (关联用)','所属rank (关联用)','所属unit_title (关联用)','所属unit_topic (关联用)','lesson_title [DB: lesson_title]','lesson_type [DB: lesson_type]','lesson_topic [DB: lesson_topic]','status [DB: status]','sequence [DB: sequence]','learning_language [DB: learning_language]','round_config [DB: round_config]'],
+    'dialog_content':['所属lesson_sn (关联用)','lesson_title','char1','char2','dialog_content'],
+    '6-DIAGNOSIS':['所属lesson_sn (关联用)','resource_type [DB: resource_type]','诊断题序号','diagnosis [JSON]','diagnosisCode [JSON]','referenceAnswer [JSON]','content_type [DB: content_type]','status [DB: status]','sequence [DB: sequence]'],
+    '9-TASK_DESC':['所属lesson_sn (关联用)','resource_type [DB: resource_type]','transition [JSON]','roundNumber [JSON]','content_type [DB: content_type]','status [DB: status]','sequence [DB: sequence]'],
+    '10-TASKS':['所属lesson_sn (关联用)','resource_type [DB: resource_type]','任务序号','task [JSON]','taskKey [JSON]','taskNumber [JSON]','content_type [DB: content_type]','status [DB: status]','sequence [DB: sequence]'],
+    '12-EXPAND_WORDS_DESC':['所属lesson_sn (关联用)','resource_type [DB: resource_type]','transition [JSON]','content_type [DB: content_type]','status [DB: status]','sequence [DB: sequence]'],
+    '13-m_lesson_knowledges':['所属lesson_sn (关联用)','point_type [DB: point_type]','point_content [DB: point_content]','explain [DB: explain]','personality [DB: personality]','status [DB: status]','sequence [DB: sequence]'],
+    '14-FL(跟读)':['所属lesson_sn (关联用)','所属知识点point_content (关联用)','sentence_type [DB: sentence_type]','sentence [DB: sentence]','sentence_define [DB: sentence_define]','sentence_words [DB: sentence_words]','defineKey_word [DB: defineKey_word]','status [DB: status]','sequence [DB: sequence]'],
+    '15-FB(补全)':['所属lesson_sn (关联用)','所属知识点point_content (关联用)','sentence_type [DB: sentence_type]','sentence [DB: sentence]','sentence_define [DB: sentence_define]','sentence_words [DB: sentence_words]','blank_index [DB: blank_index]','挖空内容(参考)','status [DB: status]','sequence [DB: sequence]'],
+    '16-CHOICE(选择题)':['所属lesson_sn (关联用)','所属知识点point_content (关联用)','question_type [DB: question_type]','question_id [DB: question_id]','stem [DB: stem]','选项A','选项B','选项C','选项D','正确答案(A/B/C/D)','status [DB: status]','sequence [DB: sequence]'],
+    '17-FILLBLANK(连词成句)':['所属lesson_sn (关联用)','所属知识点point_content (关联用)','question_type [DB: question_type]','question_id [DB: question_id]','stem [DB: stem]','stem_array [DB: stem_array]','right_array [DB: right_array]','status [DB: status]','sequence [DB: sequence]'],
+    '18-拓展词汇':['所属lesson_sn (关联用)','词汇序号','词汇(西语)','词汇(中文)','词汇(越南语)','词性'],
+  };
+
+  const rowFns = {
+    '3-m_unit':       d=>[d.course,d.rank,d.unit_title,d.unit_topic,d.status||1,d.sequence],
+    '4-m_lesson':     d=>[d.lesson_sn,d.course,d.rank,d.unit_title,d.unit_topic,d.lesson_title,d.lesson_type,d.lesson_topic,d.status||1,d.sequence,d.learning_language,d.round_config],
+    'dialog_content': d=>[d.lesson_sn,d.lesson_title,d.char1,d.char2,d.dialog],
+    '6-DIAGNOSIS':    d=>[d.lesson_sn,'DIAGNOSIS',d.seq,d.diagnosis,d.diagnosisCode,d.referenceAnswer,'JSONARRAY',d.status||1,d.sequence],
+    '9-TASK_DESC':    d=>[d.lesson_sn,'TASK_DESC',d.transition,d.roundNumber,'JSON',d.status||1,6],
+    '10-TASKS':       d=>[d.lesson_sn,'TASKS',d.seq,d.task,d.taskKey,d.taskNumber,'JSONARRAY',d.status||1,7],
+    '12-EXPAND_WORDS_DESC':d=>[d.lesson_sn,'EXPAND_WORDS_DESC',d.transition,'JSON',d.status||1,9],
+    '13-m_lesson_knowledges':d=>[d.lesson_sn,'WORDS',d.point_content,d.explain,d.personality,d.status||1,d.sequence],
+    '14-FL(跟读)':    d=>[d.lesson_sn,d.point_content,'FL',d.sentence,d.sentence_define,d.sentence_words,d.defineKey_word,d.status||1,d.sequence],
+    '15-FB(补全)':    d=>[d.lesson_sn,d.point_content,'FB',d.sentence,d.sentence_define,d.sentence_words,d.blank_index,d['挖空内容'],d.status||1,d.sequence],
+    '16-CHOICE(选择题)':d=>[d.lesson_sn,d.point_content,'CHOICE',d.question_id,d.stem,d.A,d.B,d.C,d.D,d.answer,d.status||1,0],
+    '17-FILLBLANK(连词成句)':d=>[d.lesson_sn,d.point_content,'FILLBLANK',d.question_id,d.stem,d.stem_array,d.right_array,d.status||1,0],
+    '18-拓展词汇':    d=>[d.lesson_sn,d.seq,d.es,d.zh,d.vi,d.pos],
+  };
+
+  const hdr = HEADERS[sheetName]||['data'];
+  const fn  = rowFns[sheetName]||((d)=>Object.values(d));
+  return [hdr, ...data.map(fn)];
+}
+
+function downloadStep(stepId) {
+  const step = STEPS.find(s=>s.id===stepId);
+  const data = getStepData(stepId);
+  if(!data.length){ showToast('暂无数据可下载','err'); return; }
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildRows(stepId,data)), step.sheet);
+  XLSX.writeFile(wb, `${step.sheet}.xlsx`);
+  showToast(`已下载 ${step.sheet}.xlsx`);
+}
+
+function downloadAll() {
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1 - m_course
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ['course [DB: course]','course_title [DB: course_title]','course_desc [DB: course_desc]','status [DB: status]','sequence [DB: sequence]'],
+    ['DAILY','生活西语','日常交流',1,1],
+    ['TRAVEL','旅游西语','旅行乐趣',1,2],
+    ['CAREER','职场风云','职场沟通',1,3],
+  ]), '1-m_course');
+
+  // Sheet 2 - m_rank
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ['所属course (关联用)','rank [DB: rank]','rank_name [DB: rank_name]','rank_title [DB: rank_title]','rank_desc [DB: rank_desc]','status [DB: status]','sequence [DB: sequence]','is_recommend [DB: is_recommend]'],
+    [CFG.course, CFG.rank, CFG.rank, (COURSE_NAMES[CFG.course]||'')+CFG.rank, '', 1, 1, 1],
+  ]), '2-m_rank');
+
+  // Empty sheets 5, 7, 8, 11 (not generated by this tool)
+  ['5-VIDEO','7-VIDEO_DESC','8-VIDEO_DIALOGUE','11-PROMPTS'].forEach(name=>{
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['所属lesson_sn (关联用)']]), name);
+  });
+
+  // Generated sheets
+  STEPS.forEach(s=>{
+    const data = getStepData(s.id);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildRows(s.id,data)), s.sheet);
+  });
+
+  const fname = `课程_${CFG.course}_${CFG.rank}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, fname);
+  showToast(`已下载完整工作簿 ${fname}`);
+}
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  UTILS                                                              ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+function switchMode(mode) {
+  CFG.mode = mode;
+  // tabs
+  document.getElementById('modeTabCourse').classList.toggle('active', mode === 'course');
+  document.getElementById('modeTabVocab').classList.toggle('active',  mode === 'vocab');
+  // sidebar panels
+  document.getElementById('panelCourse').classList.toggle('active', mode === 'course');
+  document.getElementById('panelVocab').classList.toggle('active',  mode === 'vocab');
+  // main content
+  document.getElementById('mainContent').style.display = mode === 'course' ? '' : 'none';
+  document.getElementById('mainVocab').style.display   = mode === 'vocab'  ? '' : 'none';
+  try { localStorage.setItem('cg_cfg', JSON.stringify(CFG)); } catch(e){}
+}
+function toggleApiKey() {
+  const input = document.getElementById('cfgApiKey');
+  const btn   = document.getElementById('keyToggleBtn');
+  if(input.type === 'password') { input.type = 'text';     btn.textContent = '隐藏'; }
+  else                          { input.type = 'password'; btn.textContent = '显示'; }
+}
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function randHex(n){ let s=''; while(s.length<n) s+=Math.random().toString(16).slice(2); return s.slice(0,n); }
+function escHtml(s){
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+let _toastTimer;
+function showToast(msg, type='ok') {
+  const el = document.getElementById('toastEl');
+  el.innerHTML = `<div class="toast ${type==='err'?'err':''}">${escHtml(msg)}</div>`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(()=>el.innerHTML='', 3500);
+}
+
+function clearAll() {
+  if(!confirm('确定清除所有已生成数据？')) return;
+  DATA = {units:[],lessons:[],dialogs:[],diagnoses:[],taskDescs:[],tasks:[],
+          expandWordDescs:[],knowledges:[],fl:[],fb:[],choices:[],fillblanks:[],expandWords:[]};
+  STEP_STATUS = {};
+  localStorage.removeItem('cg_data');
+  renderSidebar();
+  STEPS.forEach(s=>refreshTable(s.id));
+  showToast('已清除所有数据');
+}
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  INIT                                                               ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+function init() {
+  loadConfig();
+  loadData();
+  // Auto-mark steps as done if data exists
+  STEPS.forEach(s=>{ if(getStepData(s.id).length>0 && !STEP_STATUS[s.id]) STEP_STATUS[s.id]='done'; });
+  renderSidebar();
+  renderAllPanels();
+}
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  VERSION HISTORY                                                    ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+const VER_KEY = 'cg_versions';
+
+function getVersions() {
+  try { return JSON.parse(localStorage.getItem(VER_KEY)||'[]'); } catch(e){ return []; }
+}
+
+function saveVersions(list) {
+  try { localStorage.setItem(VER_KEY, JSON.stringify(list)); } catch(e){
+    showToast('版本保存失败：localStorage 空间不足','err');
+  }
+}
+
+function saveVersion(auto = false) {
+  saveConfig(); // make sure CFG is up to date
+  const totalRows = STEPS.reduce((s,st)=>s+getStepData(st.id).length, 0);
+  if (totalRows === 0) { if(!auto) showToast('暂无内容可保存','err'); return; }
+
+  const {name: courseName} = courseInfo();
+  const defaultName = `${courseName} ${CFG.rank}`;
+  const versionName = (CFG.versionName||'').trim() || defaultName;
+
+  const versions = getVersions();
+  const ver = {
+    id: Date.now(),
+    name: versionName,
+    auto,
+    timestamp: new Date().toISOString(),
+    cfg: JSON.parse(JSON.stringify(CFG)),
+    data: JSON.parse(JSON.stringify(DATA)),
+    stepStatus: JSON.parse(JSON.stringify(STEP_STATUS)),
+  };
+  versions.unshift(ver); // newest first
+  // Keep max 30 versions
+  if (versions.length > 30) versions.splice(30);
+  saveVersions(versions);
+
+  if (!auto) showToast(`✓ 已保存版本「${versionName}」`);
+  else showToast(`💾 已自动保存版本「${versionName}」`);
+}
+
+function loadVersion(id) {
+  const ver = getVersions().find(v => v.id === id);
+  if (!ver) { showToast('版本不存在','err'); return; }
+
+  if (!confirm(`加载版本「${ver.name}」将覆盖当前工作区，确定继续？`)) return;
+
+  // Restore data
+  Object.assign(DATA, ver.data);
+  Object.assign(STEP_STATUS, ver.stepStatus);
+
+  // Restore config (keep apiKey from current CFG)
+  const savedKey = CFG.apiKey;
+  Object.assign(CFG, ver.cfg);
+  CFG.apiKey = savedKey; // don't restore API key from history
+
+  // Update UI
+  loadConfig();
+  saveData();
+  renderSidebar();
+  renderAllPanels();
+  closeHistory();
+  showToast(`✓ 已加载版本「${ver.name}」`);
+}
+
+function deleteVersion(id) {
+  const versions = getVersions().filter(v => v.id !== id);
+  saveVersions(versions);
+  renderHistoryList();
+}
+
+function renameVersion(id) {
+  const versions = getVersions();
+  const ver = versions.find(v => v.id === id);
+  if (!ver) return;
+  const newName = prompt('请输入新版本名称：', ver.name);
+  if (newName === null) return;
+  ver.name = newName.trim() || ver.name;
+  saveVersions(versions);
+  renderHistoryList();
+}
+
+function openHistory() {
+  document.getElementById('historyModal').style.display = '';
+  renderHistoryList();
+}
+
+function closeHistory() {
+  document.getElementById('historyModal').style.display = 'none';
+}
+
+function renderHistoryList() {
+  const versions = getVersions();
+  const countEl = document.getElementById('historyCount');
+  const listEl  = document.getElementById('historyList');
+  countEl.textContent = versions.length ? `共 ${versions.length} 个版本` : '';
+
+  if (!versions.length) {
+    listEl.innerHTML = `<div style="text-align:center;padding:48px 0;color:var(--muted)">
+      <div style="font-size:32px;margin-bottom:10px">📭</div>
+      <div>暂无历史记录</div>
+      <div style="font-size:12px;margin-top:6px">生成完成后会自动保存，或点击「💾 保存版本」手动保存</div>
+    </div>`;
+    return;
+  }
+
+  listEl.innerHTML = versions.map(ver => {
+    const d = new Date(ver.timestamp);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const totalRows = Object.values(ver.data||{}).reduce((s,arr)=>s+(Array.isArray(arr)?arr.length:0),0);
+    const doneSteps = Object.values(ver.stepStatus||{}).filter(v=>v==='done').length;
+    const {name: courseName} = (() => {
+      if (ver.cfg?.course === 'CUSTOM') return {name: (ver.cfg?.customCourse||'自定义课程')};
+      const names = {DAILY:'生活西语',TRAVEL:'旅游西语',CAREER:'职场风云'};
+      return {name: names[ver.cfg?.course||'']||ver.cfg?.course||''};
+    })();
+
+    return `<div style="border:1px solid var(--border);border-radius:8px;padding:13px 15px;margin-bottom:10px;transition:box-shadow .15s" onmouseenter="this.style.boxShadow='0 2px 10px rgba(0,0,0,.08)'" onmouseleave="this.style.boxShadow=''">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(ver.name)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;display:flex;flex-wrap:wrap;gap:8px">
+            <span>🕐 ${dateStr}</span>
+            <span>📚 ${courseName} · ${ver.cfg?.rank||''}</span>
+            <span>✅ ${doneSteps}/13 步 · ${totalRows} 条数据</span>
+            ${ver.auto ? '<span style="color:#7C3AED">🤖 自动保存</span>' : '<span style="color:#059669">💾 手动保存</span>'}
+          </div>
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          <button onclick="loadVersion(${ver.id})" class="btn btn-primary btn-sm">打开</button>
+          <button onclick="renameVersion(${ver.id})" class="btn btn-outline btn-sm">改名</button>
+          <button onclick="if(confirm('确定删除此版本？'))deleteVersion(${ver.id})" class="btn btn-danger btn-sm">删除</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+init();
+</script>
+</body>
+</html>
