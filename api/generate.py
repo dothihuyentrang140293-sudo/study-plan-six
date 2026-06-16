@@ -1,4 +1,5 @@
 import json
+import re
 import urllib.request
 import urllib.error
 from http.server import BaseHTTPRequestHandler
@@ -30,11 +31,10 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             payload = json.dumps({
-                "model":           body.get("model", "claude-sonnet-4-5"),
-                "messages":        body.get("messages", []),
-                "max_tokens":      body.get("max_tokens", 2000),
-                "temperature":     0.85,
-                "response_format": {"type": "json_object"},
+                "model":       body.get("model", "claude-3-5-sonnet-20241022"),
+                "messages":    body.get("messages", []),
+                "max_tokens":  body.get("max_tokens", 2000),
+                "temperature": 0.85,
             }).encode()
 
             req = urllib.request.Request(
@@ -50,6 +50,7 @@ class handler(BaseHTTPRequestHandler):
             with urllib.request.urlopen(req, timeout=120) as resp:
                 result = resp.read()
 
+            # Cursor returns OpenAI-compatible response; pass through directly
             self._raw(200, result)
 
         except urllib.error.HTTPError as e:
@@ -59,9 +60,9 @@ class handler(BaseHTTPRequestHandler):
                 msg = err_obj.get("error", {}).get("message") or body.decode()
             except Exception:
                 msg = body.decode(errors="replace")
-            self._json(e.code, {"error": f"Cursor API HTTP {e.code}: {msg}", "url": CURSOR_API})
+            self._json(e.code, {"error": f"Cursor API HTTP {e.code}: {msg}"})
         except Exception as e:
-            self._json(500, {"error": str(e), "url": CURSOR_API})
+            self._json(500, {"error": str(e)})
 
     def _raw(self, status, data):
         self.send_response(status)
@@ -75,4 +76,4 @@ class handler(BaseHTTPRequestHandler):
         self._raw(status, json.dumps(obj).encode())
 
     def log_message(self, *args):
-        pass  # suppress default access log
+        pass

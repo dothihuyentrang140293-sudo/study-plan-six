@@ -463,7 +463,7 @@ const COURSE_CODES = {DAILY:'daily', TRAVEL:'travel', CAREER:'career'};
 // ╔══════════════════════════════════════════════════════════════════════╗
 // ║  STATE                                                              ║
 // ╚══════════════════════════════════════════════════════════════════════╝
-let CFG = {apiKey:'',provider:'cursor',model:'claude-sonnet-4-5',mode:'course',course:'DAILY',customCourse:'',lang:'Spanish',customLang:'',rank:'A1',numUnits:5,customNumUnits:0,numLessons:14,customNumLessons:0};
+let CFG = {apiKey:'',provider:'cursor',model:'claude-3-5-sonnet-20241022',mode:'course',course:'DAILY',customCourse:'',lang:'Spanish',customLang:'',rank:'A1',numUnits:5,customNumUnits:0,numLessons:14,customNumLessons:0};
 let DATA = {units:[],lessons:[],dialogs:[],diagnoses:[],taskDescs:[],tasks:[],
             expandWordDescs:[],knowledges:[],fl:[],fb:[],choices:[],fillblanks:[],expandWords:[]};
 let STEP_STATUS = {}; // stepId → 'idle'|'running'|'done'|'error'
@@ -589,10 +589,10 @@ Object.defineProperty(window, 'SYS', { get: getSYS });
 
 const MODELS = {
   cursor: [
-    {value:'claude-sonnet-4-5',  label:'claude-sonnet-4-5（推荐）'},
-    {value:'claude-sonnet-4-6',  label:'claude-sonnet-4-6（最新）'},
-    {value:'gpt-4o',             label:'gpt-4o'},
-    {value:'gpt-4o-mini',        label:'gpt-4o-mini（快速）'},
+    {value:'claude-3-5-sonnet-20241022', label:'claude-3.5-sonnet（推荐）'},
+    {value:'claude-3-5-haiku-20241022',  label:'claude-3.5-haiku（快速）'},
+    {value:'gpt-4o',                     label:'gpt-4o'},
+    {value:'gpt-4o-mini',                label:'gpt-4o-mini（快速）'},
   ],
   anthropic: [
     {value:'claude-3-5-haiku-20241022', label:'claude-3-5-haiku（快速省钱）'},
@@ -660,24 +660,26 @@ async function ai(userPrompt, maxTokens = 2000) {
 }
 
 async function _callCursor(userPrompt, maxTokens) {
-  // 通过 Vercel 服务端函数代理，解决浏览器 CORS 限制
-  const base = window.location.origin.includes('localhost') ? 'http://localhost:3000' : window.location.origin;
+  const base = window.location.origin;
   const r = await fetch(`${base}/api/generate`, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
       apiKey:    CFG.apiKey,
-      model:     CFG.model || 'claude-sonnet-4-5',
+      model:     CFG.model || 'claude-3-5-sonnet-20241022',
       messages:  [{role:'system', content: getSYS()}, {role:'user', content: userPrompt}],
       max_tokens: maxTokens,
     }),
   });
   if (!r.ok) {
     const e = await r.json().catch(()=>({}));
-    throw new Error(e.error?.message || `Cursor API HTTP ${r.status}`);
+    throw new Error(e.error || `Cursor API HTTP ${r.status}`);
   }
   const j = await r.json();
-  return JSON.parse(j.choices[0].message.content);
+  const text = j.choices?.[0]?.message?.content || '';
+  // Extract JSON (model may wrap in prose)
+  const match = text.match(/\{[\s\S]*\}/);
+  return JSON.parse(match ? match[0] : text);
 }
 
 async function _callAnthropic(userPrompt, maxTokens) {
