@@ -258,7 +258,8 @@ html,body{
     <div class="field">
       <label>API 提供方</label>
       <select id="cfgProvider" onchange="onProviderChange()">
-        <option value="anthropic">Anthropic Claude（推荐）</option>
+        <option value="cursor">Cursor API Key（推荐）</option>
+        <option value="anthropic">Anthropic Claude</option>
         <option value="openai">OpenAI</option>
         <option value="proxy">Cursor 本地代理（仅本地）</option>
       </select>
@@ -462,7 +463,7 @@ const COURSE_CODES = {DAILY:'daily', TRAVEL:'travel', CAREER:'career'};
 // ╔══════════════════════════════════════════════════════════════════════╗
 // ║  STATE                                                              ║
 // ╚══════════════════════════════════════════════════════════════════════╝
-let CFG = {apiKey:'',provider:'anthropic',model:'claude-3-5-haiku-20241022',mode:'course',course:'DAILY',customCourse:'',lang:'Spanish',customLang:'',rank:'A1',numUnits:5,customNumUnits:0,numLessons:14,customNumLessons:0};
+let CFG = {apiKey:'',provider:'cursor',model:'claude-sonnet-4-5',mode:'course',course:'DAILY',customCourse:'',lang:'Spanish',customLang:'',rank:'A1',numUnits:5,customNumUnits:0,numLessons:14,customNumLessons:0};
 let DATA = {units:[],lessons:[],dialogs:[],diagnoses:[],taskDescs:[],tasks:[],
             expandWordDescs:[],knowledges:[],fl:[],fb:[],choices:[],fillblanks:[],expandWords:[]};
 let STEP_STATUS = {}; // stepId → 'idle'|'running'|'done'|'error'
@@ -517,7 +518,7 @@ function loadConfig() {
     if (s) Object.assign(CFG, JSON.parse(s));
   } catch(e){}
   document.getElementById('cfgApiKey').value         = CFG.apiKey||'';
-  document.getElementById('cfgProvider').value       = CFG.provider||'anthropic';
+  document.getElementById('cfgProvider').value       = CFG.provider||'cursor';
   document.getElementById('cfgCourse').value         = CFG.course||'DAILY';
   document.getElementById('cfgCustomCourse').value   = CFG.customCourse||'';
   document.getElementById('customCourseField').style.display = (CFG.course==='CUSTOM') ? '' : 'none';
@@ -616,7 +617,11 @@ function onProviderChange(silent) {
   const label = document.getElementById('labelApiKey');
   const input = document.getElementById('cfgApiKey');
   const proxyInfo = document.getElementById('proxyInfo');
-  if (provider === 'anthropic') {
+  if (provider === 'cursor') {
+    label.innerHTML = 'Cursor API Key &nbsp;<a href="https://cursor.com/dashboard/api-keys" target="_blank" style="font-size:10px;color:var(--primary)">获取 →</a>';
+    input.placeholder = 'crsr_...';
+    proxyInfo.style.display = 'none';
+  } else if (provider === 'anthropic') {
     label.innerHTML = 'Anthropic API Key &nbsp;<a href="https://console.anthropic.com/settings/keys" target="_blank" style="font-size:10px;color:var(--primary)">获取 →</a>';
     input.placeholder = 'sk-ant-api03-...';
     proxyInfo.style.display = 'none';
@@ -650,17 +655,15 @@ async function ai(userPrompt, maxTokens = 2000) {
 }
 
 async function _callCursor(userPrompt, maxTokens) {
-  const r = await fetch('https://api2.cursor.sh/v1/chat/completions', {
+  // 通过 Vercel 服务端函数代理，解决浏览器 CORS 限制
+  const base = window.location.origin.includes('localhost') ? 'http://localhost:3000' : window.location.origin;
+  const r = await fetch(`${base}/api/generate`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${CFG.apiKey}`,
-      'Content-Type': 'application/json',
-    },
+    headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
-      model: CFG.model || 'claude-sonnet-4-5',
-      response_format: {type: 'json_object'},
-      messages: [{role:'system', content: getSYS()}, {role:'user', content: userPrompt}],
-      temperature: 0.85,
+      apiKey:    CFG.apiKey,
+      model:     CFG.model || 'claude-sonnet-4-5',
+      messages:  [{role:'system', content: getSYS()}, {role:'user', content: userPrompt}],
       max_tokens: maxTokens,
     }),
   });
