@@ -3,7 +3,7 @@ import urllib.request
 import urllib.error
 from http.server import BaseHTTPRequestHandler
 
-CURSOR_API = "https://api2.cursor.sh/v1/chat/completions"
+CURSOR_API = "https://api.cursor.sh/v1/chat/completions"
 
 CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
@@ -53,9 +53,15 @@ class handler(BaseHTTPRequestHandler):
             self._raw(200, result)
 
         except urllib.error.HTTPError as e:
-            self._raw(e.code, e.read())
+            body = e.read()
+            try:
+                err_obj = json.loads(body)
+                msg = err_obj.get("error", {}).get("message") or body.decode()
+            except Exception:
+                msg = body.decode(errors="replace")
+            self._json(e.code, {"error": f"Cursor API HTTP {e.code}: {msg}", "url": CURSOR_API})
         except Exception as e:
-            self._json(500, {"error": str(e)})
+            self._json(500, {"error": str(e), "url": CURSOR_API})
 
     def _raw(self, status, data):
         self.send_response(status)
