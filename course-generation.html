@@ -132,6 +132,10 @@ html,body{
 
 .step-panel{display:none}
 .step-panel.active{display:block}
+.vocab-panel{display:block;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.step-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.step-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px}
+.step-desc{font-size:12px;color:var(--muted)}
 
 .panel-header{
   display:flex;align-items:flex-start;justify-content:space-between;
@@ -394,10 +398,75 @@ html,body{
 
   <!-- ══ 背单词面板 ══ -->
   <div class="mode-panel" id="panelVocab">
-    <div style="background:var(--primary-soft);border-radius:var(--radius);padding:18px 14px;text-align:center;color:var(--primary)">
-      <div style="font-size:28px;margin-bottom:8px">🔤</div>
-      <div style="font-size:13px;font-weight:700;margin-bottom:4px">背单词生成</div>
-      <div style="font-size:11px;color:var(--muted);line-height:1.6">功能开发中，敬请期待</div>
+    <!-- 配置卡片 -->
+    <div class="config-card">
+      <h3>🔤 背单词参数</h3>
+      <div class="field">
+        <label>话题标签</label>
+        <select id="vCfgTag" onchange="onVocabTagChange()">
+          <option value="daily">Daily（日常）</option>
+          <option value="career">Career（职场）</option>
+          <option value="travel">Travel（旅游）</option>
+          <option value="custom">✏️ 自定义...</option>
+        </select>
+      </div>
+      <div class="field" id="vCustomTagField" style="display:none">
+        <label>自定义话题标签</label>
+        <input type="text" id="vCfgCustomTag" placeholder="如：科技、美食..." oninput="saveVocabConfig()" maxlength="20">
+      </div>
+      <div class="field">
+        <label>学习语言</label>
+        <select id="vCfgLang" onchange="onVocabLangChange()">
+          <option value="Spanish">西语（Spanish）</option>
+          <option value="English">英语（English）</option>
+          <option value="custom">✏️ 自定义...</option>
+        </select>
+      </div>
+      <div class="field" id="vCustomLangField" style="display:none">
+        <label>自定义语言</label>
+        <input type="text" id="vCfgCustomLang" placeholder="如：French、日语..." oninput="saveVocabConfig()" maxlength="20">
+      </div>
+      <div class="field">
+        <label>Rank 等级</label>
+        <select id="vCfgRank" onchange="saveVocabConfig()">
+          <option value="A1">A1（Level 1）</option>
+          <option value="A2">A2（Level 2）</option>
+          <option value="B1">B1（Level 3）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>单词包主题数量</label>
+        <input type="number" id="vCfgNumTopics" value="5" min="1" max="30" oninput="saveVocabConfig()">
+      </div>
+      <div class="field">
+        <label>每主题单词数量</label>
+        <input type="number" id="vCfgWordsPerTopic" value="10" min="5" max="50" oninput="saveVocabConfig()">
+      </div>
+      <div class="field">
+        <label>版本名称 <span style="color:var(--muted);font-weight:400">（可选）</span></label>
+        <input type="text" id="vCfgVersionName" placeholder="如：西语A1-daily-v1..." oninput="saveVocabConfig()" maxlength="50" autocomplete="off">
+      </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <button class="btn btn-primary btn-full" id="btnVocabGenAll" onclick="runVocabGeneration()">⚡ 一键全部生成</button>
+      <button class="btn btn-full" id="vStopBtn" style="background:#fff1f2;color:#dc2626;border:1px solid #fca5a5;display:none" onclick="stopVocabGeneration()">⏹ 停止生成</button>
+      <button class="btn btn-success btn-full" onclick="downloadVocabXlsx()">📥 下载单词表 xlsx</button>
+      <div style="display:flex;gap:7px">
+        <button class="btn btn-full" onclick="saveVocabVersion()" style="flex:1;background:#f0fdf4;color:#15803d;border:1px solid #86efac">💾 保存版本</button>
+        <button class="btn btn-full" onclick="openVocabHistory()" style="flex:1;background:#f5f3ff;color:#6d28d9;border:1px solid #c4b5fd">🕘 历史记录</button>
+      </div>
+      <button class="btn btn-danger btn-full" onclick="clearVocabData()">🗑 清除数据</button>
+    </div>
+
+    <!-- 进度 -->
+    <div id="vProgressArea" style="display:none">
+      <div class="section-label">生成进度</div>
+      <div id="vProgressBar" style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;margin-bottom:6px">
+        <div id="vProgressFill" style="height:100%;background:var(--primary);width:0%;transition:width .3s"></div>
+      </div>
+      <div id="vProgressText" style="font-size:11px;color:var(--muted)"></div>
     </div>
   </div>
 
@@ -407,11 +476,20 @@ html,body{
 <main class="main">
   <!-- 系统课主内容 -->
   <div id="mainContent"></div>
-  <!-- 背单词主内容（占位） -->
-  <div id="mainVocab" style="display:none;padding:60px 20px;text-align:center;color:var(--muted)">
-    <div style="font-size:56px;margin-bottom:16px">🔤</div>
-    <div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:8px">背单词内容生成</div>
-    <div style="font-size:14px;line-height:1.8">此功能正在开发中，敬请期待。<br>配置好 API 后，点击左侧按钮即可开始生成单词卡片内容。</div>
+  <!-- 背单词主内容 -->
+  <div id="mainVocab" style="display:none">
+    <div class="vocab-panel" id="vUnifiedPanel">
+      <div class="step-header">
+        <div>
+          <div class="step-title">🔤 单词表</div>
+          <div class="step-desc" id="vTableSummary">配置参数后点击「⚡ 一键全部生成」</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-sm" onclick="downloadVocabXlsx()">↓ 下载 xlsx</button>
+        </div>
+      </div>
+      <div id="vUnifiedTableBody"></div>
+    </div>
   </div>
 </main>
 
@@ -433,6 +511,20 @@ html,body{
     </div>
     <!-- Body -->
     <div style="overflow-y:auto;flex:1;padding:14px 20px" id="historyList"></div>
+  </div>
+</div>
+
+<!-- 背单词历史版本弹窗 -->
+<div id="vocabHistoryModal" style="display:none;position:fixed;inset:0;z-index:1001;background:rgba(15,23,42,.45);backdrop-filter:blur(3px)" onclick="if(event.target===this)closeVocabHistory()">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(760px,96vw);max-height:87vh;background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--text)">🔤 背单词历史版本</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px" id="vocabHistoryCount"></div>
+      </div>
+      <button onclick="closeVocabHistory()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;padding:4px">×</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:14px 20px" id="vocabHistoryList"></div>
   </div>
 </div>
 
@@ -1749,6 +1841,8 @@ function switchMode(mode) {
   // main content
   document.getElementById('mainContent').style.display = mode === 'course' ? '' : 'none';
   document.getElementById('mainVocab').style.display   = mode === 'vocab'  ? '' : 'none';
+  // 切换到背单词时渲染内容
+  if (mode === 'vocab') { loadVocabConfig(); loadVocabData(); renderVocabMain(); }
   try { localStorage.setItem('cg_cfg', JSON.stringify(CFG)); } catch(e){}
 }
 function toggleApiKey() {
@@ -1758,6 +1852,470 @@ function toggleApiKey() {
   else                          { input.type = 'password'; btn.textContent = '显示'; }
 }
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  背单词 VOCAB MODULE                                                ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+
+// ── VOCAB 配置 ────────────────────────────────────────────────────────
+let VCFG = {
+  tag:'daily', customTag:'',
+  lang:'Spanish', customLang:'',
+  rank:'A1',
+  numTopics:5, wordsPerTopic:10,
+  versionName:'',
+};
+let VOCAB_DATA = { topics:[], words:{} }; // words: {topicName:[...]}
+let vStopFlag = false;
+
+function vocabTagLabel()  { return VCFG.tag==='custom'  ? (VCFG.customTag||'自定义') : VCFG.tag; }
+function vocabLangLabel() { return VCFG.lang==='custom' ? (VCFG.customLang||'目标语言') : VCFG.lang; }
+function vocabRankLevel() { return {A1:'Level 1',A2:'Level 2',B1:'Level 3'}[VCFG.rank]||VCFG.rank; }
+
+function saveVocabConfig() {
+  VCFG.tag            = document.getElementById('vCfgTag').value;
+  VCFG.customTag      = document.getElementById('vCfgCustomTag').value;
+  VCFG.lang           = document.getElementById('vCfgLang').value;
+  VCFG.customLang     = document.getElementById('vCfgCustomLang').value;
+  VCFG.rank           = document.getElementById('vCfgRank').value;
+  VCFG.numTopics      = parseInt(document.getElementById('vCfgNumTopics').value)||5;
+  VCFG.wordsPerTopic  = parseInt(document.getElementById('vCfgWordsPerTopic').value)||10;
+  VCFG.versionName    = document.getElementById('vCfgVersionName').value;
+  try { localStorage.setItem('cg_vcfg', JSON.stringify(VCFG)); } catch(e){}
+}
+function loadVocabConfig() {
+  try { const s=localStorage.getItem('cg_vcfg'); if(s) Object.assign(VCFG,JSON.parse(s)); } catch(e){}
+  document.getElementById('vCfgTag').value          = VCFG.tag||'daily';
+  document.getElementById('vCfgCustomTag').value    = VCFG.customTag||'';
+  document.getElementById('vCustomTagField').style.display  = VCFG.tag==='custom'?'':'none';
+  document.getElementById('vCfgLang').value         = VCFG.lang||'Spanish';
+  document.getElementById('vCfgCustomLang').value   = VCFG.customLang||'';
+  document.getElementById('vCustomLangField').style.display = VCFG.lang==='custom'?'':'none';
+  document.getElementById('vCfgRank').value         = VCFG.rank||'A1';
+  document.getElementById('vCfgNumTopics').value    = VCFG.numTopics||5;
+  document.getElementById('vCfgWordsPerTopic').value= VCFG.wordsPerTopic||10;
+  document.getElementById('vCfgVersionName').value  = VCFG.versionName||'';
+}
+function loadVocabData() {
+  try { const s=localStorage.getItem('cg_vdata'); if(s) VOCAB_DATA=JSON.parse(s); } catch(e){}
+}
+function saveVocabData() {
+  try { localStorage.setItem('cg_vdata', JSON.stringify(VOCAB_DATA)); } catch(e){}
+}
+function onVocabTagChange()  {
+  document.getElementById('vCustomTagField').style.display  = document.getElementById('vCfgTag').value==='custom'?'':'none';
+  saveVocabConfig();
+}
+function onVocabLangChange() {
+  document.getElementById('vCustomLangField').style.display = document.getElementById('vCfgLang').value==='custom'?'':'none';
+  saveVocabConfig();
+}
+function clearVocabData() {
+  if(!confirm('确认清除所有背单词生成数据？')) return;
+  VOCAB_DATA = { topics:[], words:{} };
+  saveVocabData();
+  renderVocabMain();
+}
+
+// ── 进度控制 ─────────────────────────────────────────────────────────
+function vSetProgress(cur, total, text) {
+  const area = document.getElementById('vProgressArea');
+  area.style.display = '';
+  document.getElementById('vProgressFill').style.width = `${Math.round(cur/total*100)}%`;
+  document.getElementById('vProgressText').textContent = text;
+}
+function vHideProgress() { document.getElementById('vProgressArea').style.display='none'; }
+
+// ── AI 生成：Step 1 主题列表 ─────────────────────────────────────────
+async function genVocabTopics() {
+  const lang  = vocabLangLabel();
+  const tag   = vocabTagLabel();
+  const rank  = VCFG.rank;
+  const n     = VCFG.numTopics;
+  const r = await ai(
+    `You are a ${lang} vocabulary curriculum designer.
+Generate exactly ${n} vocabulary topic themes for a ${rank} level ${lang} learner.
+Topic category: "${tag}" (topics must fit this category style).
+Requirements:
+• topic_name: concise Chinese name (2-5 chars) for the theme
+• topic_name_lang: the topic name in ${lang}
+• tag: "${tag}"
+• level: "${rank}"
+• brief: one-sentence Chinese description of what words this topic covers
+All ${n} topics must be distinct and appropriate for ${rank} learners.
+Return JSON: {"topics":[{"topic_name":"...","topic_name_lang":"...","tag":"${tag}","level":"${rank}","brief":"..."}]}`,
+    2000
+  );
+  return (r.topics||[]).slice(0,n);
+}
+
+// ── AI 生成：Step 2 单词列表（单个主题）──────────────────────────────
+async function genVocabWordsForTopic(topic) {
+  const lang  = vocabLangLabel();
+  const n     = VCFG.wordsPerTopic;
+  const r = await ai(
+    `Generate exactly ${n} ${lang} vocabulary words for the topic "${topic.topic_name}" (${topic.topic_name_lang}) at ${VCFG.rank} level.
+For each word:
+• word: the ${lang} word or short phrase
+• pos: part of speech abbreviation (n./v./adj./adv./prep./pron./interj./loc.)
+• phonetic: IPA pronunciation in slashes (e.g. /saˈluðo/)
+• zh_meaning: concise Chinese meaning (2-8 chars)
+• example: natural ${lang} example sentence using the word
+• example_zh: Chinese translation of the example
+All ${n} words must be distinct and at ${VCFG.rank} level.
+CRITICAL JSON RULE: Do NOT use ASCII double-quotes inside string values — use 「」 for quoting within text.
+Return JSON: {"words":[{"word":"...","pos":"n.","phonetic":"/…/","zh_meaning":"...","example":"...","example_zh":"..."}]}`,
+    3000
+  );
+  return (r.words||[]).slice(0,n).map(w=>({
+    topic_name:      topic.topic_name,
+    topic_name_lang: topic.topic_name_lang,
+    tag:             topic.tag,
+    level:           topic.level,
+    word:            w.word||'',
+    pos:             w.pos||'',
+    phonetic:        w.phonetic||'',
+    zh_meaning:      w.zh_meaning||'',
+    example:         w.example||'',
+    example_zh:      w.example_zh||'',
+  }));
+}
+
+// ── 一键全部生成 ─────────────────────────────────────────────────────
+async function runVocabGeneration() {
+  saveVocabConfig();
+  vStopFlag = false;
+  document.getElementById('btnVocabGenAll').disabled = true;
+  document.getElementById('vStopBtn').style.display = '';
+
+  try {
+    // Step 1: 生成主题
+    vSetProgress(0, 1, '正在生成单词包主题...');
+    const topics = await genVocabTopics();
+    VOCAB_DATA.topics = topics;
+    VOCAB_DATA.words = {}; // 清空旧单词数据
+    saveVocabData();
+    renderVocabMain();
+
+    const total = topics.length;
+    for (let i=0; i<topics.length; i++) {
+      if (vStopFlag) { showToast('已停止','warn'); break; }
+      const topic = topics[i];
+      vSetProgress(i+1, total+1, `正在生成主题 ${i+1}/${total}：${topic.topic_name}...`);
+      try {
+        const words = await genVocabWordsForTopic(topic);
+        VOCAB_DATA.words[topic.topic_name] = words;
+        saveVocabData();
+        renderVocabMain(); // 每次生成完一个主题就刷新整表
+      } catch(e) {
+        showToast(`❌ 主题「${topic.topic_name}」失败: ${e.message}`, 'error');
+      }
+    }
+    vHideProgress();
+    saveVocabVersion(true); // 自动保存版本
+    showToast('✅ 背单词生成完成！', 'success');
+  } catch(e) {
+    vHideProgress();
+    showToast(`❌ 生成失败: ${e.message}`, 'error');
+  } finally {
+    document.getElementById('btnVocabGenAll').disabled = false;
+    document.getElementById('vStopBtn').style.display = 'none';
+  }
+}
+function stopVocabGeneration() { vStopFlag = true; }
+
+// ── 统一渲染：一张表格展示全部主题+单词 ────────────────────────────
+function renderVocabMain() {
+  const topics = VOCAB_DATA.topics||[];
+  const tableBody = document.getElementById('vUnifiedTableBody');
+  if (!tableBody) return;
+
+  let totalWords = 0;
+  topics.forEach(t => { totalWords += (VOCAB_DATA.words[t.topic_name]||[]).length; });
+
+  const summaryEl = document.getElementById('vTableSummary');
+  if (summaryEl) {
+    summaryEl.textContent = topics.length
+      ? `${topics.length} 个主题 · ${totalWords} 个单词 · 点击单元格可直接编辑`
+      : '配置参数后点击「⚡ 一键全部生成」';
+  }
+
+  if (!topics.length) {
+    tableBody.innerHTML = `<div style="padding:60px 20px;text-align:center;color:var(--muted)">
+      <div style="font-size:40px;margin-bottom:12px">📭</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px">暂无数据</div>
+      <div style="font-size:12px">在左侧配置参数后点击「⚡ 一键全部生成」</div>
+    </div>`;
+    return;
+  }
+
+  let html = `<table class="data-table" style="table-layout:fixed;width:100%">
+    <colgroup>
+      <col style="width:90px"><col style="width:110px"><col style="width:55px"><col style="width:95px">
+      <col style="width:80px"><col style="width:120px"><col style="width:90px">
+    </colgroup>
+    <thead><tr>
+      <th>单词</th><th>词性</th><th>音标</th><th>中文释义</th>
+      <th>例句</th><th>例句（中文）</th><th style="width:90px">操作</th>
+    </tr></thead><tbody>`;
+
+  topics.forEach((topic, ti) => {
+    const words = VOCAB_DATA.words[topic.topic_name]||[];
+    // 主题分组 header 行
+    html += `<tr style="background:linear-gradient(90deg,#f0f0ff,#f8f7ff);border-top:2px solid #c7d2fe">
+      <td colspan="7" style="padding:9px 12px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:700;color:#4338ca">📦</span>
+          <span contenteditable="true"
+            style="font-weight:700;color:#1e1b4b;outline:none;border-bottom:2px dashed #a5b4fc;padding:1px 4px;min-width:40px;cursor:text"
+            data-ti="${ti}"
+            onblur="onTopicNameEdit(${ti},this.textContent)"
+            title="点击可修改主题名">${escHtml(topic.topic_name)}</span>
+          <span style="color:#6366f1">/</span>
+          <span contenteditable="true"
+            style="font-weight:600;color:#4338ca;outline:none;border-bottom:1px dashed #c4b5fd;padding:1px 4px;min-width:40px;cursor:text"
+            onblur="editVocabTopicField(${ti},'topic_name_lang',this.textContent)">${escHtml(topic.topic_name_lang||'')}</span>
+          <span style="background:#ede9fe;color:#5b21b6;font-size:11px;padding:2px 8px;border-radius:20px">${escHtml(topic.tag||'')}</span>
+          <span style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:20px">${escHtml(topic.level||'')}</span>
+          <span style="color:var(--muted);font-size:11px">${words.length} 个单词</span>
+          <div style="margin-left:auto;display:flex;gap:6px">
+            <button class="btn btn-primary btn-sm" onclick="regenVocabWordsByTopic(${ti})" title="用当前主题名重新生成单词">↺ 重新生成单词</button>
+            <button class="btn btn-sm" onclick="downloadTopicXlsx(${ti})" title="下载此主题单词">↓ xlsx</button>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+
+    if (!words.length) {
+      html += `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:14px;font-size:12px;font-style:italic">
+        暂无单词 — 修改主题名后点击「↺ 重新生成单词」
+      </td></tr>`;
+    } else {
+      words.forEach((w,wi) => {
+        html += `<tr>
+          <td contenteditable="true" onblur="editVocabWord('${ti}',${wi},'word',this.textContent)">${escHtml(w.word||'')}</td>
+          <td contenteditable="true" onblur="editVocabWord('${ti}',${wi},'pos',this.textContent)">${escHtml(w.pos||'')}</td>
+          <td contenteditable="true" onblur="editVocabWord('${ti}',${wi},'phonetic',this.textContent)">${escHtml(w.phonetic||'')}</td>
+          <td contenteditable="true" onblur="editVocabWord('${ti}',${wi},'zh_meaning',this.textContent)">${escHtml(w.zh_meaning||'')}</td>
+          <td contenteditable="true" onblur="editVocabWord('${ti}',${wi},'example',this.textContent)">${escHtml(w.example||'')}</td>
+          <td contenteditable="true" onblur="editVocabWord('${ti}',${wi},'example_zh',this.textContent)">${escHtml(w.example_zh||'')}</td>
+          <td></td>
+        </tr>`;
+      });
+    }
+  });
+  html += '</tbody></table>';
+  tableBody.innerHTML = html;
+}
+
+// ── 编辑回调 ─────────────────────────────────────────────────────────
+function editVocabTopicField(ti, key, val) {
+  const topic = VOCAB_DATA.topics[ti];
+  if (topic) { topic[key] = val.trim(); saveVocabData(); }
+}
+
+// 修改主题名：迁移 words 字典 key
+function onTopicNameEdit(ti, newName) {
+  newName = (newName||'').trim();
+  if (!newName) return;
+  const topic = VOCAB_DATA.topics[ti];
+  if (!topic || topic.topic_name === newName) return;
+  const oldName = topic.topic_name;
+  // 迁移单词数据到新 key
+  if (VOCAB_DATA.words[oldName]) {
+    VOCAB_DATA.words[newName] = VOCAB_DATA.words[oldName].map(w=>({...w, topic_name:newName}));
+    delete VOCAB_DATA.words[oldName];
+  }
+  topic.topic_name = newName;
+  saveVocabData();
+  showToast(`主题已改为「${newName}」，点击「↺ 重新生成单词」可按新主题重新生成`, 'warn');
+}
+
+function editVocabWord(ti, wi, key, val) {
+  const topic = VOCAB_DATA.topics[parseInt(ti)];
+  if (!topic) return;
+  const arr = VOCAB_DATA.words[topic.topic_name];
+  if (arr?.[wi]) { arr[wi][key] = val.trim(); saveVocabData(); }
+}
+
+// ── 按主题重新生成单词 ────────────────────────────────────────────────
+async function regenVocabWordsByTopic(ti) {
+  const topic = VOCAB_DATA.topics[ti];
+  if (!topic) return;
+  showToast(`正在按「${topic.topic_name}」生成单词...`, 'warn');
+  try {
+    const words = await genVocabWordsForTopic(topic);
+    VOCAB_DATA.words[topic.topic_name] = words;
+    saveVocabData();
+    renderVocabMain();
+    showToast(`✅「${topic.topic_name}」单词生成完成`, 'success');
+  } catch(e) { showToast(`❌ ${e.message}`, 'error'); }
+}
+
+// ── XLSX 导出 ─────────────────────────────────────────────────────────
+function downloadVocabXlsx() {
+  if (!window.XLSX) { showToast('XLSX 库未加载','error'); return; }
+  const wb = XLSX.utils.book_new();
+  const levelMap = {A1:'Level 1 - A1', A2:'Level 2 - A2', B1:'Level 3 - B1'};
+  const sheetName = levelMap[VCFG.rank] || VCFG.rank;
+  const header = ['主题','主题（目标语言）','主题标签','语言水平','单词','词性','音标','中文释义','例句','例句（中文）'];
+  const rows = [header];
+  (VOCAB_DATA.topics||[]).forEach(t => {
+    const words = VOCAB_DATA.words[t.topic_name]||[];
+    if (!words.length) {
+      rows.push([t.topic_name, t.topic_name_lang, t.tag, t.level,'','','','','','']);
+    } else {
+      words.forEach(w => rows.push([t.topic_name, t.topic_name_lang, t.tag, t.level, w.word, w.pos, w.phonetic, w.zh_meaning, w.example, w.example_zh]));
+    }
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [14,18,10,10,16,8,14,12,30,30].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  const vname = VCFG.versionName || `vocab_${VCFG.rank}_${VCFG.tag}`;
+  XLSX.writeFile(wb, `${vname}.xlsx`);
+}
+function downloadTopicXlsx(idx) {
+  if (!window.XLSX) { showToast('XLSX 库未加载','error'); return; }
+  const topic = VOCAB_DATA.topics[idx]; if(!topic) return;
+  const header = ['主题','主题（目标语言）','标签','等级','单词','词性','音标','中文释义','例句','例句（中文）'];
+  const words = VOCAB_DATA.words[topic.topic_name]||[];
+  const rows = [header, ...words.map(w=>[topic.topic_name,topic.topic_name_lang,topic.tag,topic.level,w.word,w.pos,w.phonetic,w.zh_meaning,w.example,w.example_zh])];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [14,18,10,10,16,8,14,12,30,30].map(w=>({wch:w}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, topic.topic_name.slice(0,30));
+  XLSX.writeFile(wb, `vocab_${topic.topic_name}.xlsx`);
+}
+
+// ── 背单词版本管理 ────────────────────────────────────────────────────
+const VVER_KEY = 'cg_vocab_versions';
+
+function getVocabVersions() {
+  try { return JSON.parse(localStorage.getItem(VVER_KEY)||'[]'); } catch(e){ return []; }
+}
+function saveVocabVersions(list) {
+  try { localStorage.setItem(VVER_KEY, JSON.stringify(list)); } catch(e) {
+    showToast('版本保存失败：localStorage 空间不足','err');
+  }
+}
+
+function saveVocabVersion(auto=false) {
+  const totalWords = Object.values(VOCAB_DATA.words||{}).reduce((s,arr)=>s+(arr.length||0),0);
+  const totalTopics = (VOCAB_DATA.topics||[]).length;
+  if (totalTopics===0) { if(!auto) showToast('暂无内容可保存','err'); return; }
+
+  const defaultName = `${vocabLangLabel()} ${VCFG.rank} ${vocabTagLabel()}`;
+  const versionName = (VCFG.versionName||'').trim() || defaultName;
+
+  const versions = getVocabVersions();
+  const ver = {
+    id: Date.now(),
+    name: versionName,
+    auto,
+    timestamp: new Date().toISOString(),
+    cfg: JSON.parse(JSON.stringify(VCFG)),
+    data: JSON.parse(JSON.stringify(VOCAB_DATA)),
+    totalTopics,
+    totalWords,
+  };
+  versions.unshift(ver);
+  if (versions.length > 30) versions.splice(30);
+  saveVocabVersions(versions);
+
+  if (!auto) showToast(`✓ 已保存版本「${versionName}」`);
+  else showToast(`💾 已自动保存版本「${versionName}」`);
+}
+
+function loadVocabVersion(id) {
+  const ver = getVocabVersions().find(v=>v.id===id);
+  if (!ver) { showToast('版本不存在','err'); return; }
+  if (!confirm(`加载版本「${ver.name}」将覆盖当前工作区，确定继续？`)) return;
+
+  Object.assign(VOCAB_DATA, ver.data);
+  Object.assign(VCFG, ver.cfg);
+  saveVocabData();
+
+  // Restore UI
+  document.getElementById('vCfgTag').value           = VCFG.tag||'daily';
+  document.getElementById('vCfgCustomTag').value     = VCFG.customTag||'';
+  document.getElementById('vCustomTagField').style.display   = VCFG.tag==='custom'?'':'none';
+  document.getElementById('vCfgLang').value          = VCFG.lang||'Spanish';
+  document.getElementById('vCfgCustomLang').value    = VCFG.customLang||'';
+  document.getElementById('vCustomLangField').style.display  = VCFG.lang==='custom'?'':'none';
+  document.getElementById('vCfgRank').value          = VCFG.rank||'A1';
+  document.getElementById('vCfgNumTopics').value     = VCFG.numTopics||5;
+  document.getElementById('vCfgWordsPerTopic').value = VCFG.wordsPerTopic||10;
+  document.getElementById('vCfgVersionName').value   = VCFG.versionName||'';
+
+  renderVocabMain();
+  closeVocabHistory();
+  showToast(`✓ 已加载版本「${ver.name}」`);
+}
+
+function deleteVocabVersion(id) {
+  const versions = getVocabVersions().filter(v=>v.id!==id);
+  saveVocabVersions(versions);
+  renderVocabHistoryList();
+}
+function renameVocabVersion(id) {
+  const versions = getVocabVersions();
+  const ver = versions.find(v=>v.id===id);
+  if (!ver) return;
+  const newName = prompt('请输入新版本名称：', ver.name);
+  if (newName===null) return;
+  ver.name = newName.trim() || ver.name;
+  saveVocabVersions(versions);
+  renderVocabHistoryList();
+}
+
+function openVocabHistory() {
+  document.getElementById('vocabHistoryModal').style.display='';
+  renderVocabHistoryList();
+}
+function closeVocabHistory() {
+  document.getElementById('vocabHistoryModal').style.display='none';
+}
+
+function renderVocabHistoryList() {
+  const versions = getVocabVersions();
+  document.getElementById('vocabHistoryCount').textContent = versions.length ? `共 ${versions.length} 个版本` : '';
+  const listEl = document.getElementById('vocabHistoryList');
+
+  if (!versions.length) {
+    listEl.innerHTML = `<div style="text-align:center;padding:48px 0;color:var(--muted)">
+      <div style="font-size:32px;margin-bottom:10px">📭</div>
+      <div>暂无历史记录</div>
+      <div style="font-size:12px;margin-top:6px">生成完成后会自动保存，或点击「💾 保存版本」手动保存</div>
+    </div>`;
+    return;
+  }
+
+  listEl.innerHTML = versions.map(ver => {
+    const d = new Date(ver.timestamp);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const langLabel  = ver.cfg?.lang==='custom' ? (ver.cfg?.customLang||'自定义') : (ver.cfg?.lang||'');
+    const tagLabel   = ver.cfg?.tag==='custom'  ? (ver.cfg?.customTag||'自定义')  : (ver.cfg?.tag||'');
+    return `<div style="border:1px solid var(--border);border-radius:8px;padding:13px 15px;margin-bottom:10px;transition:box-shadow .15s" onmouseenter="this.style.boxShadow='0 2px 10px rgba(0,0,0,.08)'" onmouseleave="this.style.boxShadow=''">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(ver.name)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;display:flex;flex-wrap:wrap;gap:8px">
+            <span>🕐 ${dateStr}</span>
+            <span>🌐 ${langLabel} · ${ver.cfg?.rank||''}</span>
+            <span>🏷 ${tagLabel}</span>
+            <span>📦 ${ver.totalTopics||0} 个主题 · ${ver.totalWords||0} 个单词</span>
+            ${ver.auto ? '<span style="color:#7C3AED">🤖 自动保存</span>' : '<span style="color:#059669">💾 手动保存</span>'}
+          </div>
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          <button onclick="loadVocabVersion(${ver.id})" class="btn btn-primary btn-sm">打开</button>
+          <button onclick="renameVocabVersion(${ver.id})" class="btn btn-outline btn-sm">改名</button>
+          <button onclick="if(confirm('确定删除此版本？'))deleteVocabVersion(${ver.id})" class="btn btn-danger btn-sm">删除</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
 function randHex(n){ let s=''; while(s.length<n) s+=Math.random().toString(16).slice(2); return s.slice(0,n); }
 function escHtml(s){
   return String(s)
@@ -1794,6 +2352,10 @@ function init() {
   STEPS.forEach(s=>{ if(getStepData(s.id).length>0 && !STEP_STATUS[s.id]) STEP_STATUS[s.id]='done'; });
   renderSidebar();
   renderAllPanels();
+  // 背单词模块初始化
+  loadVocabConfig();
+  loadVocabData();
+  renderVocabMain();
 }
 
 // ╔══════════════════════════════════════════════════════════════════════╗
